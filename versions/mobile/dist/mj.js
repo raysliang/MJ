@@ -1025,7 +1025,7 @@
     dealSeed: document.querySelector("#deal-seed"),
     boardTitle: document.querySelector("#board-title"),
     riverGrid: document.querySelector("#river-grid"),
-    eastDiscarded: document.querySelector("#east-discarded"),
+    newTile: document.querySelector("#new-tile-0"),
     analysisDistance: document.querySelector("#analysis-distance"),
     analysisImprovementCount: document.querySelector("#analysis-improvement-count"),
     analysisKnownCount: document.querySelector("#analysis-known-count"),
@@ -1076,7 +1076,7 @@
   }
   function renderMelds(seat, takenTileId = null) {
     if (seat.melds.length === 0) {
-      return '<span class="empty-inline">none</span>';
+      return "";
     }
     return seat.melds.map((meld) => {
       const label = meld.kind === "kong" ? "Kong" : "Pong";
@@ -1094,7 +1094,8 @@
     const showingPreDiscardHand = lastAction?.seatIndex === 0 && Array.isArray(lastAction.handBeforeDiscard);
     const handTiles = showingPreDiscardHand ? lastAction.handBeforeDiscard : seat.concealed;
     const drawnTileIds = showingPreDiscardHand ? lastAction.drawnTileIds ?? [] : [];
-    const displayHandTiles = drawnTileIds.length ? [...handTiles.filter((tile) => !drawnTileIds.includes(tile.id)), ...handTiles.filter((tile) => drawnTileIds.includes(tile.id))] : handTiles;
+    const displayHandTiles = handTiles.filter((tile) => !drawnTileIds.includes(tile.id));
+    const displayDrawnTiles = handTiles.filter((tile) => drawnTileIds.includes(tile.id));
     const discardedTileId = showingPreDiscardHand ? lastAction.discardedTileId : null;
     const discardOptions = showingPreDiscardHand ? lastAction?.discardOptions ?? [] : [];
     const discardOptionByType = new Map(discardOptions.map((option) => [option.type, option]));
@@ -1115,11 +1116,11 @@
       alternative: equivalentDiscardTypes.has(tile.type) && tile.type !== selectedDiscardType,
       decision: discardOptionByType.get(tile.type) ? buildTileDecision(discardOptionByType.get(tile.type), discardOptions, discardedTileId) : null
     })).join("");
-    elements.eastDiscarded.innerHTML = seat.discards.map((tile) => tileMarkup(tile, {
-      compact: true,
-      claimed: state.claimedDiscardIds.includes(tile.id)
-    })).join("") || '<span class="empty-inline">none</span>';
     document.querySelector("#melds-0").innerHTML = renderMelds(seat);
+    elements.newTile.innerHTML = displayDrawnTiles.map((tile) => tileMarkup(tile, {
+      drawn: true,
+      discarded: discardedTileId === tile.id
+    })).join("");
     renderEastAnalysis(analysis);
   }
   function renderOpponentSeat(seatIndex) {

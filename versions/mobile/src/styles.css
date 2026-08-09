@@ -1746,6 +1746,9 @@ kbd {
   }
 
   .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -1754,6 +1757,9 @@ kbd {
     min-width: 0;
     width: 100%;
     padding: 0.35rem 0 0.55rem;
+    background: rgba(245, 239, 229, 0.94);
+    box-shadow: 0 5px 14px rgba(27, 42, 49, 0.08);
+    backdrop-filter: blur(8px);
   }
 
   .control-cluster {
@@ -1840,6 +1846,114 @@ kbd {
 
   .meter {
     height: 0.22rem;
+  }
+
+  .seat-header {
+    display: none;
+  }
+
+  .seat-metrics {
+    margin: 0 0 0.3rem;
+    padding: 0;
+    border: 0;
+  }
+
+  .seat-metrics span,
+  .desktop-only-label {
+    display: none;
+  }
+
+  .seat-metrics strong {
+    color: var(--seat-accent);
+    font-size: 0.72rem;
+  }
+
+  .tile-section + .tile-section {
+    margin-top: 0.35rem;
+  }
+
+  .compact-hand-layout {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.35rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .compact-hand-layout > .meld-row {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    min-height: 0;
+    max-width: 35%;
+    overflow-x: auto;
+  }
+
+  .compact-hand-layout > .hand-row {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .new-tile-slot {
+    display: flex;
+    align-items: flex-end;
+    flex: 0 0 auto;
+    min-height: 2.2rem;
+    padding-left: 0.35rem;
+    border-left: 1px solid var(--line-strong);
+  }
+
+  .new-tile-slot:empty {
+    display: none;
+  }
+
+  .tile-decision-tooltip {
+    position: fixed;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    max-height: 40vh;
+    overflow: auto;
+    transform: translateY(0.4rem);
+  }
+
+  .tile-has-decision:hover .tile-decision-tooltip,
+  .tile-has-decision:focus-visible .tile-decision-tooltip {
+    transform: translateY(0);
+  }
+
+  .compact-hand-layout {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.35rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .compact-hand-layout > .meld-row {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    min-height: 0;
+    max-width: 35%;
+    overflow-x: auto;
+  }
+
+  .compact-hand-layout > .hand-row {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .new-tile-slot {
+    display: flex;
+    align-items: flex-end;
+    flex: 0 0 auto;
+    min-height: 2.2rem;
+    padding-left: 0.35rem;
+    border-left: 1px solid var(--line-strong);
+  }
+
+  .new-tile-slot:empty {
+    display: none;
   }
 
   .table-stage {
