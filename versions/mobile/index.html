@@ -13,11 +13,11 @@
       <header class="topbar">
         <button class="button button-secondary new-deal-button" id="new-deal" type="button">
           <span aria-hidden="true">↻</span>
-          <span>New Deal</span>
+          <span class="button-label">New Deal</span>
         </button>
         <button class="button button-secondary copy-position-button" id="copy-position" type="button">
           <span aria-hidden="true">⧉</span>
-          <span id="copy-position-label">Copy for LLM</span>
+          <span class="button-label" id="copy-position-label">Copy for LLM</span>
         </button>
         <section class="status-ribbon" aria-label="Simulation status" aria-live="polite">
           <div class="status-item">
@@ -25,16 +25,16 @@
             <strong id="turn-number">0</strong>
           </div>
           <div class="status-item status-item-wide">
-            <span class="status-label">Live wall</span>
+            <span class="status-label">Wall</span>
             <div class="meter"><span id="live-wall-meter"></span></div>
             <strong id="live-wall-count">69</strong>
           </div>
           <div class="status-item">
-            <span class="status-label">Replacement tiles</span>
+            <span class="status-label">Repl.</span>
             <strong id="replacement-count">14</strong>
           </div>
           <div class="status-item">
-            <span class="status-label">Deal seed</span>
+            <span class="status-label">Seed</span>
             <strong class="seed-value" id="deal-seed">0</strong>
           </div>
         </section>
@@ -42,10 +42,10 @@
           <div class="turn-controls">
             <button class="button button-secondary" id="previous-turn" type="button">
               <span aria-hidden="true">←</span>
-              <span>Previous</span>
+              <span class="button-label">Previous</span>
             </button>
             <button class="button button-primary" id="next-turn" type="button">
-              <span>Next</span>
+              <span class="button-label">Next</span>
               <span aria-hidden="true">→</span>
             </button>
           </div>
@@ -58,39 +58,40 @@
           <article class="seat-card seat-east east-seat-card" id="seat-0">
             <div class="seat-header">
               <div>
-                <p class="seat-direction">EAST · DEALER</p>
-                <h2>Your hand</h2>
+                <h2 class="desktop-only-label">Your hand</h2>
               </div>
               <span class="seat-state" id="seat-state-0">Ready</span>
             </div>
             <div class="seat-metrics">
-              <div><span>Tiles away</span><strong id="seat-distance-0">2</strong></div>
-              <div><span>Visible information</span><strong class="metric-note">East only</strong></div>
+              <div class="distance-metric"><strong id="seat-distance-0">2 tiles away</strong></div>
             </div>
             <div class="tile-section">
-              <div class="section-heading"><span>Hand</span><span id="hand-count-0">14 tiles</span></div>
               <div class="tile-row hand-row" id="hand-0"></div>
             </div>
+            <div class="tile-section discard-section">
+              <div class="section-heading">Discarded tiles</div>
+              <div class="tile-row discard-row" id="east-discarded"></div>
+            </div>
             <div class="tile-section meld-section">
-              <div class="section-heading"><span>Open melds</span></div>
+              <div class="section-heading">Melds</div>
               <div class="tile-row meld-row" id="melds-0"></div>
             </div>
           </article>
           <section class="opponent-strip" aria-label="Public opponent information">
             <article class="opponent-card seat-south" id="opponent-1">
-              <div class="opponent-card-heading"><div><p class="seat-direction">SOUTH</p><h2>South</h2></div><span class="seat-state" id="opponent-state-1">Waiting</span></div>
-              <div class="opponent-public-line"><span>Open melds</span><strong id="opponent-meld-count-1">0</strong></div>
+              <div class="opponent-meld-line"><strong>South:</strong>
               <div class="opponent-melds" id="opponent-melds-1"></div>
+              </div>
             </article>
             <article class="opponent-card seat-west" id="opponent-2">
-              <div class="opponent-card-heading"><div><p class="seat-direction">WEST</p><h2>West</h2></div><span class="seat-state" id="opponent-state-2">Waiting</span></div>
-              <div class="opponent-public-line"><span>Open melds</span><strong id="opponent-meld-count-2">0</strong></div>
+              <div class="opponent-meld-line"><strong>West:</strong>
               <div class="opponent-melds" id="opponent-melds-2"></div>
+              </div>
             </article>
             <article class="opponent-card seat-north" id="opponent-3">
-              <div class="opponent-card-heading"><div><p class="seat-direction">NORTH</p><h2>North</h2></div><span class="seat-state" id="opponent-state-3">Waiting</span></div>
-              <div class="opponent-public-line"><span>Open melds</span><strong id="opponent-meld-count-3">0</strong></div>
+              <div class="opponent-meld-line"><strong>North:</strong>
               <div class="opponent-melds" id="opponent-melds-3"></div>
+              </div>
             </article>
           </section>
           </section>
@@ -98,10 +99,9 @@
           <section class="board-center" aria-label="Public discard river">
             <div class="board-heading">
               <div>
-                <p class="board-kicker">PUBLIC RIVER</p>
                 <h2>Discarded tiles</h2>
               </div>
-              <div class="turn-summary"><span class="turn-pulse" aria-hidden="true"></span><strong id="board-title">East to act</strong></div>
+              <div class="turn-summary"><strong id="board-title">East to act</strong></div>
             </div>
             <div class="river-grid" id="river-grid">
               <div class="river-empty">No tiles have entered the river yet.</div>

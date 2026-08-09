@@ -1800,26 +1800,91 @@ kbd {
     padding-inline: 0.5rem;
   }
 
-  .turn-controls,
-  .turn-controls .button {
-    width: 100%;
+  .topbar {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "new copy controls"
+      "status status status";
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0 0.55rem;
+  }
+
+  .new-deal-button {
+    grid-area: new;
+  }
+
+  .copy-position-button {
+    grid-area: copy;
+  }
+
+  .control-cluster {
+    grid-area: controls;
+    justify-self: end;
+    width: auto;
   }
 
   .turn-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    width: auto;
+    gap: 0.25rem;
   }
 
-  .status-item {
-    padding: 0.72rem;
+  .button {
+    width: 2.2rem;
+    min-height: 2.2rem;
+    padding: 0.3rem;
+    gap: 0;
   }
 
-  .status-item-wide {
-    grid-column: span 2;
+  .button-label {
+    display: none;
+  }
+
+  .button span[aria-hidden="true"] {
+    font-size: 1.05rem;
   }
 
   .status-ribbon {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-area: status;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-height: 2.55rem;
+    border-radius: 0.35rem;
+  }
+
+  .status-item-wide {
+    grid-column: auto;
+    grid-template-columns: 1fr auto;
+  }
+
+  .status-item {
+    gap: 0.08rem;
+    padding: 0.32rem 0.2rem;
+  }
+
+  .status-item .status-label {
+    overflow: hidden;
+    font-size: 0.47rem;
+    letter-spacing: 0.04em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .status-item strong {
+    font-size: 0.82rem;
+  }
+
+  .status-item .seed-value {
+    max-width: none;
+    font-size: 0.58rem;
+  }
+
+  .status-item-wide .status-label {
+    grid-column: 1 / -1;
+  }
+
+  .meter {
+    height: 0.22rem;
   }
 
   .table-stage {
@@ -1828,26 +1893,140 @@ kbd {
     grid-template-areas:
       "east"
       "opponents";
-    padding: 0.55rem;
+    padding: 0.4rem;
   }
 
   .opponent-strip {
     grid-template-columns: 1fr;
     grid-template-rows: repeat(3, auto);
+    gap: 0.15rem;
+  }
+
+  .opponent-card {
+    padding: 0.2rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .opponent-meld-line {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .opponent-meld-line > strong {
+    flex: 0 0 auto;
+    color: var(--seat-accent);
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+  }
+
+  .opponent-melds {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 1.9rem;
+    margin: 0;
+    overflow-x: auto;
+  }
+
+  .opponent-melds .meld-row {
+    min-height: 1.9rem;
+    flex-wrap: nowrap;
+  }
+
+  .opponent-melds .meld-label,
+  .opponent-melds .empty-inline {
+    display: none;
+  }
+
+  .opponent-melds .meld-group {
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .opponent-melds .tile-compact {
+    width: 1.3rem;
+    height: 1.8rem;
+    flex-basis: 1.3rem;
+    font-size: 1rem;
   }
 
   .seat-card,
   .board-center,
   .decision-panel {
-    padding: 0.85rem;
+    padding: 0.5rem;
+  }
+
+  .seat-header {
+    display: none;
+  }
+
+  .seat-metrics {
+    margin: 0 0 0.3rem;
+    padding: 0;
+    border: 0;
+  }
+
+  .seat-metrics > div {
+    display: block;
+  }
+
+  .seat-metrics span,
+  .desktop-only-label {
+    display: none;
+  }
+
+  .seat-metrics strong {
+    color: var(--seat-accent);
+    font-size: 0.72rem;
+  }
+
+  .tile-section + .tile-section {
+    margin-top: 0.35rem;
+  }
+
+  .section-heading {
+    margin-bottom: 0.2rem;
+    font-size: 0.5rem;
+    letter-spacing: 0.04em;
   }
 
   .board-heading {
-    flex-direction: column;
+    align-items: center;
   }
 
   .turn-summary {
-    align-self: flex-start;
+    display: none;
+  }
+
+  .board-center h2 {
+    font-size: 1rem;
+  }
+
+  .board-legend {
+    display: none;
+  }
+
+  .river-grid {
+    min-height: 0;
+    margin-top: 0.3rem;
+    padding: 0;
+  }
+
+  .river-lane-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.12rem;
+    min-height: 1.9rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
 
   .tile {
@@ -1856,9 +2035,9 @@ kbd {
 
   .hand-row {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(14, minmax(0, 1fr));
     align-items: end;
-    gap: 0.28rem;
+    gap: 0.12rem;
   }
 
   .hand-row .tile {
@@ -1866,7 +2045,11 @@ kbd {
     height: auto;
     flex-basis: auto;
     aspect-ratio: 0.73;
-    font-size: 1.6rem;
+    font-size: clamp(0.88rem, 5vw, 1.35rem);
+  }
+
+  .hand-row .tile-drawn {
+    margin-left: 0.2rem;
   }
 
   .tile-compact {
@@ -1878,6 +2061,20 @@ kbd {
 
   .meld-row {
     gap: 0.45rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .discard-row {
+    gap: 0.12rem;
+    min-height: 2.2rem;
+  }
+
+  .discard-row .tile-compact {
+    width: 1.35rem;
+    height: 1.85rem;
+    flex-basis: 1.35rem;
+    font-size: 1.08rem;
   }
 
   .river-lane-tiles {
@@ -1887,6 +2084,102 @@ kbd {
 
   .need-tile-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .hand-analysis {
+    padding: 0.55rem;
+    border: 0;
+    border-top: 2px solid var(--teal);
+    border-radius: 0.25rem;
+    box-shadow: none;
+    background: rgba(255, 253, 248, 0.5);
+  }
+
+  .analysis-topline {
+    gap: 0.35rem;
+  }
+
+  .analysis-topline h2 {
+    margin-top: 0.2rem;
+    font-size: 1.1rem;
+  }
+
+  .analysis-visibility {
+    font-size: 0.45rem;
+  }
+
+  .analysis-summary {
+    gap: 0.2rem;
+    margin-top: 0.4rem;
+  }
+
+  .analysis-summary > div {
+    gap: 0.1rem;
+    padding: 0.3rem;
+    border: 0;
+    background: transparent;
+  }
+
+  .analysis-summary span {
+    font-size: 0.46rem;
+  }
+
+  .analysis-summary strong {
+    font-size: 0.82rem;
+  }
+
+  .analysis-note {
+    margin: 0.35rem 0 0;
+    font-size: 0.52rem;
+  }
+
+  .need-groups {
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+  }
+
+  .need-group {
+    padding: 0.35rem;
+    border: 0;
+    border-left: 2px solid var(--teal);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .need-group-heading h3 {
+    font-size: 0.8rem;
+  }
+
+  .need-group-kicker,
+  .need-group-heading > strong {
+    font-size: 0.48rem;
+  }
+
+  .need-tile-grid {
+    gap: 0.25rem;
+    margin-top: 0.3rem;
+  }
+
+  .need-tile-card {
+    gap: 0.2rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .need-tile-card .tile-compact {
+    flex-basis: 1.45rem;
+    width: 1.45rem;
+    height: 2rem;
+    font-size: 1.1rem;
+  }
+
+  .need-tile-count strong {
+    font-size: 0.65rem;
+  }
+
+  .need-tile-count span {
+    font-size: 0.45rem;
   }
 
   .analysis-summary span {

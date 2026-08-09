@@ -1025,6 +1025,7 @@
     dealSeed: document.querySelector("#deal-seed"),
     boardTitle: document.querySelector("#board-title"),
     riverGrid: document.querySelector("#river-grid"),
+    eastDiscarded: document.querySelector("#east-discarded"),
     analysisDistance: document.querySelector("#analysis-distance"),
     analysisImprovementCount: document.querySelector("#analysis-improvement-count"),
     analysisKnownCount: document.querySelector("#analysis-known-count"),
@@ -1093,6 +1094,7 @@
     const showingPreDiscardHand = lastAction?.seatIndex === 0 && Array.isArray(lastAction.handBeforeDiscard);
     const handTiles = showingPreDiscardHand ? lastAction.handBeforeDiscard : seat.concealed;
     const drawnTileIds = showingPreDiscardHand ? lastAction.drawnTileIds ?? [] : [];
+    const displayHandTiles = drawnTileIds.length ? [...handTiles.filter((tile) => !drawnTileIds.includes(tile.id)), ...handTiles.filter((tile) => drawnTileIds.includes(tile.id))] : handTiles;
     const discardedTileId = showingPreDiscardHand ? lastAction.discardedTileId : null;
     const discardOptions = showingPreDiscardHand ? lastAction?.discardOptions ?? [] : [];
     const discardOptionByType = new Map(discardOptions.map((option) => [option.type, option]));
@@ -1106,14 +1108,17 @@
     card.classList.toggle("is-finished", Boolean(state.terminal) && !winner);
     card.setAttribute("aria-current", active ? "step" : "false");
     document.querySelector("#seat-state-0").textContent = stateLabel;
-    document.querySelector("#seat-distance-0").textContent = distanceMarkup(analysis);
-    document.querySelector("#hand-count-0").textContent = `${handTiles.length} ${handTiles.length === 1 ? "tile" : "tiles"}`;
-    document.querySelector("#hand-0").innerHTML = handTiles.map((tile) => tileMarkup(tile, {
+    document.querySelector("#seat-distance-0").textContent = `${distanceMarkup(analysis)} away`;
+    document.querySelector("#hand-0").innerHTML = displayHandTiles.map((tile) => tileMarkup(tile, {
       drawn: drawnTileIds.includes(tile.id),
       discarded: discardedTileId === tile.id,
       alternative: equivalentDiscardTypes.has(tile.type) && tile.type !== selectedDiscardType,
       decision: discardOptionByType.get(tile.type) ? buildTileDecision(discardOptionByType.get(tile.type), discardOptions, discardedTileId) : null
     })).join("");
+    elements.eastDiscarded.innerHTML = seat.discards.map((tile) => tileMarkup(tile, {
+      compact: true,
+      claimed: state.claimedDiscardIds.includes(tile.id)
+    })).join("") || '<span class="empty-inline">none</span>';
     document.querySelector("#melds-0").innerHTML = renderMelds(seat);
     renderEastAnalysis(analysis);
   }
@@ -1130,8 +1135,6 @@
     card.classList.toggle("is-next", next);
     card.classList.toggle("is-winner", winner);
     card.classList.toggle("is-finished", Boolean(state.terminal) && !winner);
-    document.querySelector(`#opponent-state-${seatIndex}`).textContent = stateLabel;
-    document.querySelector(`#opponent-meld-count-${seatIndex}`).textContent = seat.melds.length;
     document.querySelector(`#opponent-melds-${seatIndex}`).innerHTML = renderMelds(seat);
   }
   function needTilesMarkup(items, emptyMessage) {
@@ -1199,7 +1202,8 @@
       return;
     }
     const action = state.lastAction;
-    elements.riverGrid.innerHTML = state.players.map((player) => `<div class="river-lane"><div class="river-lane-label"><span>${player.name}</span><small>${player.discards.length}</small></div><div class="river-lane-tiles">${player.discards.map((tile) => tileMarkup(tile, { compact: true, claimed: state.claimedDiscardIds.includes(tile.id), drawn: action?.drawnTileIds?.includes(tile.id), discarded: action?.discardedTileId === tile.id })).join("") || '<span class="empty-inline">none</span>'}</div></div>`).join("");
+    const discardedTiles = state.players.flatMap((player) => player.discards);
+    elements.riverGrid.innerHTML = `<div class="river-lane-tiles">${discardedTiles.map((tile) => tileMarkup(tile, { compact: true, claimed: state.claimedDiscardIds.includes(tile.id), drawn: action?.drawnTileIds?.includes(tile.id), discarded: action?.discardedTileId === tile.id })).join("") || '<span class="empty-inline">none</span>'}</div>`;
   }
   function renderBoardStatus() {
     const activePlayer = state.players[state.activeSeat];
