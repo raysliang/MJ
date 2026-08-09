@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b615d">
     <title>MJ Simulation | Public Table</title>
-    <link rel="stylesheet" href="./src/styles.css?v=compact-mobile">
+    <link rel="stylesheet" href="./src/styles.css?v=hand-row-mobile">
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to table</a>
@@ -65,16 +65,10 @@
             <div class="seat-metrics">
               <div class="distance-metric"><strong id="seat-distance-0">2 tiles away</strong></div>
             </div>
-            <div class="tile-section">
-              <div class="tile-row hand-row" id="hand-0"></div>
-            </div>
-            <div class="tile-section discard-section">
-              <div class="section-heading">Discarded tiles</div>
-              <div class="tile-row discard-row" id="east-discarded"></div>
-            </div>
-            <div class="tile-section meld-section">
-              <div class="section-heading">Melds</div>
+            <div class="compact-hand-layout">
               <div class="tile-row meld-row" id="melds-0"></div>
+              <div class="tile-row hand-row" id="hand-0"></div>
+              <div class="new-tile-slot" id="new-tile-0"></div>
             </div>
           </article>
           <section class="opponent-strip" aria-label="Public opponent information">
