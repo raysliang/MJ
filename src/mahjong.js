@@ -860,6 +860,54 @@ export function getPublicCounts(state, perspectiveSeat) {
   return counts;
 }
 
+function handStructureScore(counts) {
+  let score = 0;
+  for (let type = 0; type < TILE_COUNT; type += 1) {
+    const count = counts[type];
+    if (count >= 2) {
+      score += 4;
+    }
+    if (count >= 3) {
+      score += 3;
+    }
+  }
+  for (let suitStart = 0; suitStart < 27; suitStart += 9) {
+    for (let rank = 0; rank < 8; rank += 1) {
+      score += Math.min(counts[suitStart + rank], counts[suitStart + rank + 1]) * 2;
+    }
+    for (let rank = 0; rank < 7; rank += 1) {
+      score += Math.min(counts[suitStart + rank], counts[suitStart + rank + 2]);
+      score += Math.min(counts[suitStart + rank], counts[suitStart + rank + 1], counts[suitStart + rank + 2]) * 3;
+    }
+  }
+  return score;
+}
+
+export function analyzeKeepableDraws(state, perspectiveSeat = 0) {
+  const seat = state.players[perspectiveSeat];
+  const visibleCounts = getPublicCounts(state, perspectiveSeat);
+  const currentStructure = handStructureScore(tileCounts(seat.concealed));
+  const keepableTiles = [];
+
+  for (let type = 0; type < TILE_COUNT; type += 1) {
+    const remaining = Math.max(0, COPIES_PER_TILE - Math.min(COPIES_PER_TILE, visibleCounts[type] ?? 0));
+    if (remaining === 0) {
+      continue;
+    }
+    const drawnTile = { id: -1, type };
+    const bestDiscard = chooseBestDiscard([...seat.concealed, drawnTile], seat.melds, visibleCounts);
+    const keptStructure = bestDiscard ? handStructureScore(tileCounts(bestDiscard.remaining)) : currentStructure;
+    if (bestDiscard && bestDiscard.tile.type !== type && keptStructure > currentStructure) {
+      keepableTiles.push({ type, remaining, glyph: tileGlyph(type), name: tileName(type) });
+    }
+  }
+
+  return {
+    tiles: keepableTiles,
+    copies: totalLiveCopies(keepableTiles)
+  };
+}
+
 export function analyzePlayer(state, seatIndex) {
   const seat = state.players[seatIndex];
   const visibleCounts = getPublicCounts(state, seatIndex);

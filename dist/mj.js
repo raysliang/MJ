@@ -790,6 +790,50 @@
     }
     return counts;
   }
+  function handStructureScore(counts) {
+    let score = 0;
+    for (let type = 0; type < TILE_COUNT; type += 1) {
+      const count = counts[type];
+      if (count >= 2) {
+        score += 4;
+      }
+      if (count >= 3) {
+        score += 3;
+      }
+    }
+    for (let suitStart = 0; suitStart < 27; suitStart += 9) {
+      for (let rank = 0; rank < 8; rank += 1) {
+        score += Math.min(counts[suitStart + rank], counts[suitStart + rank + 1]) * 2;
+      }
+      for (let rank = 0; rank < 7; rank += 1) {
+        score += Math.min(counts[suitStart + rank], counts[suitStart + rank + 2]);
+        score += Math.min(counts[suitStart + rank], counts[suitStart + rank + 1], counts[suitStart + rank + 2]) * 3;
+      }
+    }
+    return score;
+  }
+  function analyzeKeepableDraws(state2, perspectiveSeat = 0) {
+    const seat = state2.players[perspectiveSeat];
+    const visibleCounts = getPublicCounts(state2, perspectiveSeat);
+    const currentStructure = handStructureScore(tileCounts(seat.concealed));
+    const keepableTiles = [];
+    for (let type = 0; type < TILE_COUNT; type += 1) {
+      const remaining = Math.max(0, COPIES_PER_TILE - Math.min(COPIES_PER_TILE, visibleCounts[type] ?? 0));
+      if (remaining === 0) {
+        continue;
+      }
+      const drawnTile = { id: -1, type };
+      const bestDiscard = chooseBestDiscard([...seat.concealed, drawnTile], seat.melds, visibleCounts);
+      const keptStructure = bestDiscard ? handStructureScore(tileCounts(bestDiscard.remaining)) : currentStructure;
+      if (bestDiscard && bestDiscard.tile.type !== type && keptStructure > currentStructure) {
+        keepableTiles.push({ type, remaining, glyph: tileGlyph(type), name: tileName(type) });
+      }
+    }
+    return {
+      tiles: keepableTiles,
+      copies: totalLiveCopies(keepableTiles)
+    };
+  }
   function analyzePlayer(state2, seatIndex) {
     const seat = state2.players[seatIndex];
     const visibleCounts = getPublicCounts(state2, seatIndex);
@@ -1012,7 +1056,12 @@
   }
 
   // src/main.js
-  var state = createGame();
+  function createInitialState(seed) {
+    const initialState = createGame(seed === void 0 ? {} : { seed });
+    initialState.turn = 1;
+    return nextTurn(initialState);
+  }
+  var state = createInitialState();
   var timeline = [structuredClone(state)];
   var elements = {
     next: document.querySelector("#next-turn"),
@@ -1024,7 +1073,9 @@
     boardTitle: document.querySelector("#board-title"),
     riverGrid: document.querySelector("#river-grid"),
     newTile: document.querySelector("#new-tile-0"),
-    analysisDistance: document.querySelector("#analysis-distance"),
+    heldTileSummary: document.querySelector("#held-tile-summary"),
+    heldTile: document.querySelector("#held-tile-0"),
+    heldCount: document.querySelector("#held-count"),
     analysisImprovementCount: document.querySelector("#analysis-improvement-count"),
     sequenceCount: document.querySelector("#sequence-count"),
     otherCount: document.querySelector("#other-count"),
@@ -1125,7 +1176,8 @@
     const family = type < 9 ? "tile-characters" : type < 18 ? "tile-bamboo" : type < 27 ? "tile-dots" : "tile-honor";
     const classes = ["tile", family, `tile-type-${type}`, compact ? "tile-compact" : "", claimed ? "tile-claimed" : "", drawn ? "tile-drawn" : "", discarded ? "tile-discard-target" : "", taken ? "tile-taken" : "", alternative ? "tile-alternative" : "", decision ? "tile-has-decision" : "", inline ? "tile-inline" : ""].filter(Boolean).join(" ");
     const decisionMarkup = decision ? `<span class="tile-decision-tooltip" role="tooltip"><strong>${decision.status}</strong><span>${decision.comparison}</span><small>${decision.structure} \xB7 ${decision.metrics}</small></span>` : "";
-    return `<span class="${classes}" title="${label}"${decision ? ' tabindex="0"' : ""} aria-label="${label}">${tileFaceMarkup(type, glyph, hidden)}${decisionMarkup}</span>`;
+    const discardMarker = discarded ? '<span class="discard-marker" aria-hidden="true"></span>' : "";
+    return `<span class="${classes}" title="${label}"${decision ? ' tabindex="0"' : ""} aria-label="${label}">${tileFaceMarkup(type, glyph, hidden)}${discardMarker}${decisionMarkup}</span>`;
   }
   function distanceMarkup(analysis) {
     if (analysis.complete) {
@@ -1153,7 +1205,7 @@
     const showingPreDiscardHand = lastAction?.seatIndex === 0 && Array.isArray(lastAction.handBeforeDiscard);
     const handTiles = showingPreDiscardHand ? lastAction.handBeforeDiscard : seat.concealed;
     const drawnTileIds = showingPreDiscardHand ? lastAction.drawnTileIds ?? [] : [];
-    const openingAction = lastAction?.seatIndex === 0 && lastAction.turn === 1 && !lastAction.drawnTiles?.length;
+    const openingAction = lastAction?.seatIndex === 0 && lastAction.turn === 2 && !lastAction.drawnTiles?.length;
     const openingTile = handTiles.length === 14 && (!lastAction && state.turn === 0 || openingAction) ? handTiles[handTiles.length - 1] : null;
     const newTileIds = drawnTileIds.length ? drawnTileIds : openingTile ? [openingTile.id] : [];
     const displayHandTiles = handTiles.filter((tile) => !newTileIds.includes(tile.id));
@@ -1171,7 +1223,7 @@
     card.classList.toggle("is-finished", Boolean(state.terminal) && !winner);
     card.setAttribute("aria-current", active ? "step" : "false");
     document.querySelector("#seat-state-0").textContent = stateLabel;
-    document.querySelector("#seat-distance-0").textContent = `${distanceMarkup(analysis)} away`;
+    document.querySelector("#seat-distance-0").textContent = `${distanceMarkup(analysis)} to win`;
     const compactHandLayout = card.querySelector(".compact-hand-layout");
     compactHandLayout.classList.toggle("has-melds", seat.melds.length > 0);
     document.querySelector("#hand-0").innerHTML = displayHandTiles.map((tile) => tileMarkup(tile, {
@@ -1185,6 +1237,14 @@
       drawn: true,
       discarded: discardedTileId === tile.id
     })).join("");
+    const improvementTypes = new Set(analysis.improvementTiles.map((item) => item.type));
+    const keepableDraws = analyzeKeepableDraws(state, 0).tiles.filter((item) => !improvementTypes.has(item.type));
+    const keepableCopies = keepableDraws.reduce((total, item) => total + item.remaining, 0);
+    const drawHand = analyzedHandForDraws(analysis);
+    const drawMelds = seat.melds;
+    elements.heldTileSummary.hidden = keepableDraws.length === 0;
+    elements.heldCount.textContent = `${keepableCopies} live ${keepableCopies === 1 ? "tile" : "tiles"}`;
+    elements.heldTile.innerHTML = needTilesMarkup(keepableDraws, "", drawHand, drawMelds, analysis.visibleCounts);
     renderEastAnalysis(analysis);
   }
   function renderOpponentSeat(seatIndex) {
@@ -1203,23 +1263,49 @@
     document.querySelector(`#opponent-label-${seatIndex}`).textContent = `${seat.name} [${seat.concealed.length}]:`;
     document.querySelector(`#opponent-melds-${seatIndex}`).innerHTML = renderMelds(seat);
   }
-  function needTilesMarkup(items, emptyMessage) {
+  function analyzedHandForDraws(analysis) {
+    const seat = state.players[0];
+    if (state.activeSeat === 0 && !state.needsDraw && !state.terminal) {
+      return chooseBestDiscard(seat.concealed, seat.melds, analysis.visibleCounts)?.remaining ?? seat.concealed;
+    }
+    return seat.concealed;
+  }
+  function discardTilesForDraw(item, hand, melds, visibleCounts) {
+    const decision = chooseBestDiscard([...hand, { id: -1, type: item.type }], melds, visibleCounts);
+    if (!decision) {
+      return [];
+    }
+    const seen = /* @__PURE__ */ new Set();
+    return decision.optimalDiscards.map((candidate) => candidate.tile).filter((tile) => {
+      if (seen.has(tile.type)) {
+        return false;
+      }
+      seen.add(tile.type);
+      return true;
+    });
+  }
+  function needTilesMarkup(items, emptyMessage, hand, melds, visibleCounts) {
     if (items.length === 0) {
       return `<p class="needs-empty">${emptyMessage}</p>`;
     }
-    return items.map((item) => `<div class="need-tile-card"><div>${tileMarkup({ type: item.type }, { compact: true })}</div><div class="need-tile-count"><strong>${item.remaining}</strong></div></div>`).join("");
+    return items.map((item) => {
+      const discardTiles = discardTilesForDraw(item, hand, melds, visibleCounts);
+      const tooltip = discardTiles.length ? `<span class="draw-discard-tooltip" role="tooltip" aria-hidden="true">${discardTiles.map((tile) => tileMarkup(tile, { compact: true })).join("")}</span>` : "";
+      return `<div class="need-tile-card${discardTiles.length ? " has-draw-discard" : ""}"${discardTiles.length ? ' tabindex="0"' : ""} aria-label="${item.remaining} live tiles"><div>${tileMarkup({ type: item.type }, { compact: true })}</div><div class="need-tile-count"><strong>${item.remaining}</strong></div>${tooltip}</div>`;
+    }).join("");
   }
   function renderEastAnalysis(analysis) {
     const sequenceTiles = analysis.improvementTiles.filter((item) => item.createsSequence);
     const otherTiles = analysis.improvementTiles.filter((item) => !item.createsSequence);
-    elements.analysisDistance.textContent = distanceMarkup(analysis);
     elements.analysisImprovementCount.textContent = `${analysis.improvementCopies} live`;
     const sequenceCopies = sequenceTiles.reduce((total, item) => total + item.remaining, 0);
     const otherCopies = otherTiles.reduce((total, item) => total + item.remaining, 0);
+    const drawHand = analyzedHandForDraws(analysis);
+    const drawMelds = state.players[0].melds;
     elements.sequenceCount.textContent = `${sequenceCopies} live ${sequenceCopies === 1 ? "copy" : "copies"}`;
     elements.otherCount.textContent = `${otherCopies} live ${otherCopies === 1 ? "copy" : "copies"}`;
-    elements.sequenceTiles.innerHTML = needTilesMarkup(sequenceTiles, "No live draw creates a new sequence.");
-    elements.otherTiles.innerHTML = needTilesMarkup(otherTiles, "No other live draw improves the hand.");
+    elements.sequenceTiles.innerHTML = needTilesMarkup(sequenceTiles, "No live draw creates a new sequence.", drawHand, drawMelds, analysis.visibleCounts);
+    elements.otherTiles.innerHTML = otherTiles.length ? needTilesMarkup(otherTiles, "", drawHand, drawMelds, analysis.visibleCounts) : "";
   }
   function buildTileDecision(option, options, selectedId) {
     const selected = option.id === selectedId;
@@ -1413,7 +1499,7 @@
     render();
   });
   elements.newDeal.addEventListener("click", () => {
-    state = createGame({ seed: Date.now() });
+    state = createInitialState(Date.now());
     timeline = [structuredClone(state)];
     render();
   });

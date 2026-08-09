@@ -55,9 +55,8 @@
               <span class="seat-state" id="seat-state-0">Ready</span>
             </div>
             <div class="seat-metrics">
-              <div class="distance-metric"><strong id="seat-distance-0">2 tiles away</strong></div>
+              <div class="distance-metric"><strong id="seat-distance-0">2 tiles to win</strong></div>
               <div class="seat-analysis-metrics">
-                <div><span>Distance</span><strong id="analysis-distance">2 tiles</strong></div>
                 <div><span>Live improvements</span><strong id="analysis-improvement-count">0</strong></div>
               </div>
             </div>
@@ -118,6 +117,10 @@
                 <div class="need-group-heading"><div><h3 id="other-heading">Improves without a sequence</h3></div><strong id="other-count">0 live copies</strong></div>
                 <div class="need-tile-grid" id="other-tiles"></div>
               </section>
+              <section class="need-group need-group-held" id="held-tile-summary" aria-labelledby="held-heading" hidden>
+                <div class="need-group-heading"><div><h3 id="held-heading">Held for structure</h3></div><strong id="held-count">0 live tiles</strong></div>
+                <div class="need-tile-grid" id="held-tile-0"></div>
+              </section>
             </div>
           </aside>
 
@@ -126,6 +129,6 @@
       </main>
 
     </div>
-    <script src="./dist/mj.js?v=fixed-hand-grid"></script>
+    <script src="./dist/mj.js?v=helpful-discard-tooltips"></script>
   </body>
 </html>
