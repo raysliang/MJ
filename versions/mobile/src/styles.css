@@ -1801,26 +1801,24 @@ kbd {
   }
 
   .topbar {
-    grid-template-columns: auto auto minmax(0, 1fr);
-    grid-template-areas:
-      "new copy controls"
-      "status status status";
+    display: flex;
+    flex-direction: row;
     align-items: center;
     gap: 0.35rem;
     padding: 0.35rem 0 0.55rem;
   }
 
   .new-deal-button {
-    grid-area: new;
+    flex: 0 0 auto;
   }
 
   .copy-position-button {
-    grid-area: copy;
+    flex: 0 0 auto;
   }
 
   .control-cluster {
-    grid-area: controls;
     justify-self: end;
+    flex: 0 0 auto;
     width: auto;
   }
 
@@ -1846,10 +1844,15 @@ kbd {
   }
 
   .status-ribbon {
-    grid-area: status;
+    order: 0;
+    flex: 1 1 auto;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    min-height: 2.55rem;
+    position: static;
+    width: auto;
+    min-height: 2.2rem;
+    height: 2.2rem;
     border-radius: 0.35rem;
+    transform: none;
   }
 
   .status-item-wide {
@@ -1859,7 +1862,7 @@ kbd {
 
   .status-item {
     gap: 0.08rem;
-    padding: 0.32rem 0.2rem;
+    padding: 0.18rem 0.2rem;
   }
 
   .status-item .status-label {
