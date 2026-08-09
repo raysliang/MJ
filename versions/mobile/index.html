@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b615d">
+    <title>MJ Simulation | Public Table</title>
+    <link rel="stylesheet" href="./src/styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to table</a>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="button button-secondary new-deal-button" id="new-deal" type="button">
+          <span aria-hidden="true">↻</span>
+          <span>New Deal</span>
+        </button>
+        <button class="button button-secondary copy-position-button" id="copy-position" type="button">
+          <span aria-hidden="true">⧉</span>
+          <span id="copy-position-label">Copy for LLM</span>
+        </button>
+        <section class="status-ribbon" aria-label="Simulation status" aria-live="polite">
+          <div class="status-item">
+            <span class="status-label">Turn</span>
+            <strong id="turn-number">0</strong>
+          </div>
+          <div class="status-item status-item-wide">
+            <span class="status-label">Live wall</span>
+            <div class="meter"><span id="live-wall-meter"></span></div>
+            <strong id="live-wall-count">69</strong>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Replacement tiles</span>
+            <strong id="replacement-count">14</strong>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Deal seed</span>
+            <strong class="seed-value" id="deal-seed">0</strong>
+          </div>
+        </section>
+        <div class="control-cluster" aria-label="Simulation controls">
+          <div class="turn-controls">
+            <button class="button button-secondary" id="previous-turn" type="button">
+              <span aria-hidden="true">←</span>
+              <span>Previous</span>
+            </button>
+            <button class="button button-primary" id="next-turn" type="button">
+              <span>Next</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main id="main-content">
+        <div class="simulation-layout">
+          <section class="table-stage" aria-label="East hand and public table information">
+          <article class="seat-card seat-east east-seat-card" id="seat-0">
+            <div class="seat-header">
+              <div>
+                <p class="seat-direction">EAST · DEALER</p>
+                <h2>Your hand</h2>
+              </div>
+              <span class="seat-state" id="seat-state-0">Ready</span>
+            </div>
+            <div class="seat-metrics">
+              <div><span>Tiles away</span><strong id="seat-distance-0">2</strong></div>
+              <div><span>Visible information</span><strong class="metric-note">East only</strong></div>
+            </div>
+            <div class="tile-section">
+              <div class="section-heading"><span>Hand</span><span id="hand-count-0">14 tiles</span></div>
+              <div class="tile-row hand-row" id="hand-0"></div>
+            </div>
+            <div class="tile-section meld-section">
+              <div class="section-heading"><span>Open melds</span></div>
+              <div class="tile-row meld-row" id="melds-0"></div>
+            </div>
+          </article>
+          <section class="opponent-strip" aria-label="Public opponent information">
+            <article class="opponent-card seat-south" id="opponent-1">
+              <div class="opponent-card-heading"><div><p class="seat-direction">SOUTH</p><h2>South</h2></div><span class="seat-state" id="opponent-state-1">Waiting</span></div>
+              <div class="opponent-public-line"><span>Open melds</span><strong id="opponent-meld-count-1">0</strong></div>
+              <div class="opponent-melds" id="opponent-melds-1"></div>
+            </article>
+            <article class="opponent-card seat-west" id="opponent-2">
+              <div class="opponent-card-heading"><div><p class="seat-direction">WEST</p><h2>West</h2></div><span class="seat-state" id="opponent-state-2">Waiting</span></div>
+              <div class="opponent-public-line"><span>Open melds</span><strong id="opponent-meld-count-2">0</strong></div>
+              <div class="opponent-melds" id="opponent-melds-2"></div>
+            </article>
+            <article class="opponent-card seat-north" id="opponent-3">
+              <div class="opponent-card-heading"><div><p class="seat-direction">NORTH</p><h2>North</h2></div><span class="seat-state" id="opponent-state-3">Waiting</span></div>
+              <div class="opponent-public-line"><span>Open melds</span><strong id="opponent-meld-count-3">0</strong></div>
+              <div class="opponent-melds" id="opponent-melds-3"></div>
+            </article>
+          </section>
+          </section>
+
+          <section class="board-center" aria-label="Public discard river">
+            <div class="board-heading">
+              <div>
+                <p class="board-kicker">PUBLIC RIVER</p>
+                <h2>Discarded tiles</h2>
+              </div>
+              <div class="turn-summary"><span class="turn-pulse" aria-hidden="true"></span><strong id="board-title">East to act</strong></div>
+            </div>
+            <div class="river-grid" id="river-grid">
+              <div class="river-empty">No tiles have entered the river yet.</div>
+            </div>
+            <div class="board-legend">
+              <span><i class="legend-swatch legend-active"></i> active seat</span>
+              <span><i class="legend-swatch legend-needed"></i> improvement tile</span>
+              <span><i class="legend-swatch legend-claimed"></i> claimed discard</span>
+            </div>
+          </section>
+
+          <aside class="hand-analysis" aria-labelledby="analysis-heading">
+            <div class="analysis-topline">
+              <div>
+                <p class="board-kicker">EAST VIEW</p>
+                <h2 id="analysis-heading">What East needs</h2>
+              </div>
+              <span class="analysis-visibility"><i aria-hidden="true"></i> public tiles only</span>
+            </div>
+            <div class="analysis-summary">
+              <div><span>Distance</span><strong id="analysis-distance">2 tiles</strong></div>
+              <div><span>Live improvements</span><strong id="analysis-improvement-count">0</strong></div>
+              <div><span>Known tiles</span><strong id="analysis-known-count">0</strong></div>
+            </div>
+            <p class="analysis-note" id="analysis-note">The counts include East's hand, every discard, and every exposed meld or kong.</p>
+            <div class="need-groups">
+              <section class="need-group need-group-sequence" aria-labelledby="sequence-heading">
+                <div class="need-group-heading"><div><span class="need-group-kicker">Sequence shape</span><h3 id="sequence-heading">Creates a new sequence</h3></div><strong id="sequence-count">0 live copies</strong></div>
+                <div class="need-tile-grid" id="sequence-tiles"></div>
+              </section>
+              <section class="need-group need-group-other" aria-labelledby="other-heading">
+                <div class="need-group-heading"><div><span class="need-group-kicker">Other useful draws</span><h3 id="other-heading">Improves without a sequence</h3></div><strong id="other-count">0 live copies</strong></div>
+                <div class="need-tile-grid" id="other-tiles"></div>
+              </section>
+            </div>
+          </aside>
+
+        </div>
+
+      </main>
+
+    </div>
+    <script src="./dist/mj.js"></script>
+  </body>
+</html>

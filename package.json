@@ -1,0 +1,13 @@
+{
+  "name": "explainable-mahjong-simulator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --outfile=dist/mj.js",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
+}
