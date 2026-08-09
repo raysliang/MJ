@@ -29,14 +29,6 @@
             <div class="meter"><span id="live-wall-meter"></span></div>
             <strong id="live-wall-count">69</strong>
           </div>
-          <div class="status-item">
-            <span class="status-label">Repl.</span>
-            <strong id="replacement-count">14</strong>
-          </div>
-          <div class="status-item">
-            <span class="status-label">Seed</span>
-            <strong class="seed-value" id="deal-seed">0</strong>
-          </div>
         </section>
         <div class="control-cluster" aria-label="Simulation controls">
           <div class="turn-controls">
@@ -64,6 +56,10 @@
             </div>
             <div class="seat-metrics">
               <div class="distance-metric"><strong id="seat-distance-0">2 tiles away</strong></div>
+              <div class="seat-analysis-metrics">
+                <div><span>Distance</span><strong id="analysis-distance">2 tiles</strong></div>
+                <div><span>Live improvements</span><strong id="analysis-improvement-count">0</strong></div>
+              </div>
             </div>
             <div class="compact-hand-layout">
               <div class="tile-row meld-row" id="melds-0"></div>
@@ -73,17 +69,17 @@
           </article>
           <section class="opponent-strip" aria-label="Public opponent information">
             <article class="opponent-card seat-south" id="opponent-1">
-              <div class="opponent-meld-line"><strong>South:</strong>
+              <div class="opponent-meld-line"><strong id="opponent-label-1">South [13]:</strong>
               <div class="opponent-melds" id="opponent-melds-1"></div>
               </div>
             </article>
             <article class="opponent-card seat-west" id="opponent-2">
-              <div class="opponent-meld-line"><strong>West:</strong>
+              <div class="opponent-meld-line"><strong id="opponent-label-2">West [13]:</strong>
               <div class="opponent-melds" id="opponent-melds-2"></div>
               </div>
             </article>
             <article class="opponent-card seat-north" id="opponent-3">
-              <div class="opponent-meld-line"><strong>North:</strong>
+              <div class="opponent-meld-line"><strong id="opponent-label-3">North [13]:</strong>
               <div class="opponent-melds" id="opponent-melds-3"></div>
               </div>
             </article>
@@ -110,24 +106,16 @@
           <aside class="hand-analysis" aria-labelledby="analysis-heading">
             <div class="analysis-topline">
               <div>
-                <p class="board-kicker">EAST VIEW</p>
-                <h2 id="analysis-heading">What East needs</h2>
+                <h2 id="analysis-heading">Helpful Tiles</h2>
               </div>
-              <span class="analysis-visibility"><i aria-hidden="true"></i> public tiles only</span>
             </div>
-            <div class="analysis-summary">
-              <div><span>Distance</span><strong id="analysis-distance">2 tiles</strong></div>
-              <div><span>Live improvements</span><strong id="analysis-improvement-count">0</strong></div>
-              <div><span>Known tiles</span><strong id="analysis-known-count">0</strong></div>
-            </div>
-            <p class="analysis-note" id="analysis-note">The counts include East's hand, every discard, and every exposed meld or kong.</p>
             <div class="need-groups">
               <section class="need-group need-group-sequence" aria-labelledby="sequence-heading">
-                <div class="need-group-heading"><div><span class="need-group-kicker">Sequence shape</span><h3 id="sequence-heading">Creates a new sequence</h3></div><strong id="sequence-count">0 live copies</strong></div>
+                <div class="need-group-heading"><div><h3 id="sequence-heading">Creates a new sequence</h3></div><strong id="sequence-count">0 live copies</strong></div>
                 <div class="need-tile-grid" id="sequence-tiles"></div>
               </section>
               <section class="need-group need-group-other" aria-labelledby="other-heading">
-                <div class="need-group-heading"><div><span class="need-group-kicker">Other useful draws</span><h3 id="other-heading">Improves without a sequence</h3></div><strong id="other-count">0 live copies</strong></div>
+                <div class="need-group-heading"><div><h3 id="other-heading">Improves without a sequence</h3></div><strong id="other-count">0 live copies</strong></div>
                 <div class="need-tile-grid" id="other-tiles"></div>
               </section>
             </div>
@@ -138,6 +126,6 @@
       </main>
 
     </div>
-    <script src="./dist/mj.js"></script>
+    <script src="./dist/mj.js?v=fixed-hand-grid"></script>
   </body>
 </html>

@@ -18,15 +18,11 @@ const elements = {
   turn: document.querySelector("#turn-number"),
   liveWall: document.querySelector("#live-wall-count"),
   liveWallMeter: document.querySelector("#live-wall-meter"),
-  replacement: document.querySelector("#replacement-count"),
-  dealSeed: document.querySelector("#deal-seed"),
   boardTitle: document.querySelector("#board-title"),
   riverGrid: document.querySelector("#river-grid"),
   newTile: document.querySelector("#new-tile-0"),
   analysisDistance: document.querySelector("#analysis-distance"),
   analysisImprovementCount: document.querySelector("#analysis-improvement-count"),
-  analysisKnownCount: document.querySelector("#analysis-known-count"),
-  analysisNote: document.querySelector("#analysis-note"),
   sequenceCount: document.querySelector("#sequence-count"),
   otherCount: document.querySelector("#other-count"),
   sequenceTiles: document.querySelector("#sequence-tiles"),
@@ -37,7 +33,7 @@ const elements = {
 
 const DOT_POSITIONS = {
   1: [5],
-  2: [1, 9],
+  2: [2, 8],
   3: [1, 5, 9],
   4: [1, 3, 7, 9],
   5: [1, 3, 5, 7, 9],
@@ -47,14 +43,80 @@ const DOT_POSITIONS = {
   9: [1, 2, 3, 4, 5, 6, 7, 8, 9]
 };
 
+const BAMBOO_POSITIONS = {
+  2: [2, 8],
+  3: [1, 5, 9],
+  4: [1, 3, 7, 9],
+  5: [1, 3, 5, 7, 9],
+  6: [1, 3, 4, 6, 7, 9],
+  7: [1, 3, 4, 5, 6, 7, 9],
+  8: [1, 2, 3, 4, 6, 7, 8, 9],
+  9: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+};
+
+const TILE_ART_URLS = {
+  0: "https://commons.wikimedia.org/wiki/Special:FilePath/0101%E4%B8%80%E8%90%AC.svg",
+  1: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/0102%E4%BA%8C%E8%90%AC.svg/120px-0102%E4%BA%8C%E8%90%AC.svg.png",
+  2: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/0103%E4%B8%89%E8%90%AC.svg/120px-0103%E4%B8%89%E8%90%AC.svg.png",
+  3: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/0104%E5%9B%9B%E8%90%AC.svg/120px-0104%E5%9B%9B%E8%90%AC.svg.png",
+  4: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/0105%E4%BA%94%E8%90%AC.svg/120px-0105%E4%BA%94%E8%90%AC.svg.png",
+  5: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/0106%E5%85%AD%E8%90%AC.svg/120px-0106%E5%85%AD%E8%90%AC.svg.png",
+  6: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/0107%E4%B8%83%E8%90%AC.svg/120px-0107%E4%B8%83%E8%90%AC.svg.png",
+  7: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/0108%E5%85%AB%E8%90%AC.svg/120px-0108%E5%85%AB%E8%90%AC.svg.png",
+  8: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/0109%E4%B9%9D%E8%90%AC.svg/120px-0109%E4%B9%9D%E8%90%AC.svg.png",
+  9: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/0201%E4%B8%80%E9%A4%85.svg/120px-0201%E4%B8%80%E9%A4%85.svg.png",
+  10: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/0202%E4%BA%8C%E9%A4%85.svg/120px-0202%E4%BA%8C%E9%A4%85.svg.png",
+  11: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/0203%E4%B8%89%E9%A4%85.svg/120px-0203%E4%B8%89%E9%A4%85.svg.png",
+  12: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/0204%E5%9B%9B%E9%A4%85.svg/120px-0204%E5%9B%9B%E9%A4%85.svg.png",
+  13: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/0205%E4%BA%94%E9%A4%85.svg/120px-0205%E4%BA%94%E9%A4%85.svg.png",
+  14: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/0206%E5%85%AD%E9%A4%85.svg/120px-0206%E5%85%AD%E9%A4%85.svg.png",
+  15: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/0207%E4%B8%83%E9%A4%85.svg/120px-0207%E4%B8%83%E9%A4%85.svg.png",
+  16: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/0208%E5%85%AB%E9%A4%85.svg/120px-0208%E5%85%AB%E9%A4%85.svg.png",
+  17: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/0209%E4%B9%9D%E9%A4%85.svg/120px-0209%E4%B9%9D%E9%A4%85.svg.png",
+  18: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/0301%E4%B8%80%E6%A2%9D.svg/120px-0301%E4%B8%80%E6%A2%9D.svg.png",
+  19: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/0302%E4%BA%8C%E6%A2%9D.svg/120px-0302%E4%BA%8C%E6%A2%9D.svg.png",
+  20: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/0303%E4%B8%89%E6%A2%9D.svg/120px-0303%E4%B8%89%E6%A2%9D.svg.png",
+  21: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/0304%E5%9B%9B%E6%A2%9D.svg/120px-0304%E5%9B%9B%E6%A2%9D.svg.png",
+  22: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/0305%E4%BA%94%E6%A2%9D.svg/120px-0305%E4%BA%94%E6%A2%9D.svg.png",
+  23: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/0306%E5%85%AD%E6%A2%9D.svg/120px-0306%E5%85%AD%E6%A2%9D.svg.png",
+  24: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/0307%E4%B8%83%E6%A2%9D.svg/120px-0307%E4%B8%83%E6%A2%9D.svg.png",
+  25: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/0308%E5%85%AB%E6%A2%9D.svg/120px-0308%E5%85%AB%E6%A2%9D.svg.png",
+  26: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/0309%E4%B9%9D%E6%A2%9D.svg/120px-0309%E4%B9%9D%E6%A2%9D.svg.png",
+  27: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/0401%E6%9D%B1%E9%A2%A8.svg/120px-0401%E6%9D%B1%E9%A2%A8.svg.png",
+  28: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/0403%E5%8D%97%E9%A2%A8.svg/120px-0403%E5%8D%97%E9%A2%A8.svg.png",
+  29: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/0402%E8%A5%BF%E9%A2%A8.svg/120px-0402%E8%A5%BF%E9%A2%A8.svg.png",
+  30: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/0404%E5%8C%97%E9%A2%A8.svg/120px-0404%E5%8C%97%E9%A2%A8.svg.png",
+  31: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/0405%E4%B8%AD.svg/120px-0405%E4%B8%AD.svg.png",
+  32: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/0406%E7%99%BC.svg/120px-0406%E7%99%BC.svg.png",
+  33: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/0407%E7%99%BD.svg/120px-0407%E7%99%BD.svg.png"
+};
+
+function localTileArtPath(type) {
+  return `./assets/tiles/tile-${String(type).padStart(2, "0")}.png`;
+}
+
 function tileFaceMarkup(type, glyph, hidden) {
   if (hidden) {
     return `<span class="tile-face tile-back">${glyph}</span>`;
   }
+  if (TILE_ART_URLS[type]) {
+    return `<img class="tile-art" src="${localTileArtPath(type)}" data-fallback="${TILE_ART_URLS[type]}" alt="" draggable="false" onerror="this.onerror=null;this.src=this.dataset.fallback">`;
+  }
   if (type >= 18 && type < 27) {
     const rank = type - 17;
-    const pips = DOT_POSITIONS[rank].map((position, index) => `<span class="dot-pip dot-position-${position} dot-tone-${index % 5}"></span>`).join("");
-    return `<span class="tile-face tile-dots-face" aria-hidden="true">${pips}</span>`;
+    const pips = DOT_POSITIONS[rank].map(position => {
+      const row = Math.floor((position - 1) / 3);
+      return `<span class="dot-pip dot-position-${position} dot-row-${row}"></span>`;
+    }).join("");
+    return `<span class="tile-face tile-dots-face tile-dots-rank-${rank}" aria-hidden="true">${pips}</span>`;
+  }
+  if (type >= 9 && type < 18) {
+    const rank = type - 8;
+    if (rank === 1) {
+      return `<span class="tile-face tile-bamboo-one">${glyph}</span>`;
+    }
+    const sticks = BAMBOO_POSITIONS[rank].map(position => `<span class="bamboo-stick bamboo-position-${position}"></span>`).join("");
+    return `<span class="tile-face tile-bamboo-face tile-bamboo-rank-${rank}" aria-hidden="true">${sticks}</span>`;
   }
   return `<span class="tile-face">${glyph}</span>`;
 }
@@ -64,7 +126,7 @@ function tileMarkup(tile, { compact = false, claimed = false, drawn = false, dis
   const glyph = hidden ? "🀫" : tileGlyph(type);
   const label = hidden ? "Concealed tile" : `${tileEnglishName(type)} ${tileName(type)}`;
   const family = type < 9 ? "tile-characters" : type < 18 ? "tile-bamboo" : type < 27 ? "tile-dots" : "tile-honor";
-  const classes = ["tile", family, compact ? "tile-compact" : "", claimed ? "tile-claimed" : "", drawn ? "tile-drawn" : "", discarded ? "tile-discard-target" : "", taken ? "tile-taken" : "", alternative ? "tile-alternative" : "", decision ? "tile-has-decision" : "", inline ? "tile-inline" : ""].filter(Boolean).join(" ");
+  const classes = ["tile", family, `tile-type-${type}`, compact ? "tile-compact" : "", claimed ? "tile-claimed" : "", drawn ? "tile-drawn" : "", discarded ? "tile-discard-target" : "", taken ? "tile-taken" : "", alternative ? "tile-alternative" : "", decision ? "tile-has-decision" : "", inline ? "tile-inline" : ""].filter(Boolean).join(" ");
   const decisionMarkup = decision ? `<span class="tile-decision-tooltip" role="tooltip"><strong>${decision.status}</strong><span>${decision.comparison}</span><small>${decision.structure} · ${decision.metrics}</small></span>` : "";
   return `<span class="${classes}" title="${label}"${decision ? " tabindex=\"0\"" : ""} aria-label="${label}">${tileFaceMarkup(type, glyph, hidden)}${decisionMarkup}</span>`;
 }
@@ -97,8 +159,16 @@ function renderEastSeat() {
   const showingPreDiscardHand = lastAction?.seatIndex === 0 && Array.isArray(lastAction.handBeforeDiscard);
   const handTiles = showingPreDiscardHand ? lastAction.handBeforeDiscard : seat.concealed;
   const drawnTileIds = showingPreDiscardHand ? lastAction.drawnTileIds ?? [] : [];
-  const displayHandTiles = handTiles.filter(tile => !drawnTileIds.includes(tile.id));
-  const displayDrawnTiles = handTiles.filter(tile => drawnTileIds.includes(tile.id));
+  const openingAction = lastAction?.seatIndex === 0
+    && lastAction.turn === 1
+    && !(lastAction.drawnTiles?.length);
+  const openingTile = handTiles.length === 14
+    && ((!lastAction && state.turn === 0) || openingAction)
+    ? handTiles[handTiles.length - 1]
+    : null;
+  const newTileIds = drawnTileIds.length ? drawnTileIds : openingTile ? [openingTile.id] : [];
+  const displayHandTiles = handTiles.filter(tile => !newTileIds.includes(tile.id));
+  const displayDrawnTiles = handTiles.filter(tile => newTileIds.includes(tile.id));
   const discardedTileId = showingPreDiscardHand ? lastAction.discardedTileId : null;
   const discardOptions = showingPreDiscardHand ? lastAction?.discardOptions ?? [] : [];
   const discardOptionByType = new Map(discardOptions.map(option => [option.type, option]));
@@ -118,6 +188,8 @@ function renderEastSeat() {
   card.setAttribute("aria-current", active ? "step" : "false");
   document.querySelector("#seat-state-0").textContent = stateLabel;
   document.querySelector("#seat-distance-0").textContent = `${distanceMarkup(analysis)} away`;
+  const compactHandLayout = card.querySelector(".compact-hand-layout");
+  compactHandLayout.classList.toggle("has-melds", seat.melds.length > 0);
   document.querySelector("#hand-0").innerHTML = displayHandTiles.map(tile => tileMarkup(tile, {
     drawn: drawnTileIds.includes(tile.id),
     discarded: discardedTileId === tile.id,
@@ -148,6 +220,7 @@ function renderOpponentSeat(seatIndex) {
   card.classList.toggle("is-next", next);
   card.classList.toggle("is-winner", winner);
   card.classList.toggle("is-finished", Boolean(state.terminal) && !winner);
+  document.querySelector(`#opponent-label-${seatIndex}`).textContent = `${seat.name} [${seat.concealed.length}]:`;
   document.querySelector(`#opponent-melds-${seatIndex}`).innerHTML = renderMelds(seat);
 }
 
@@ -155,19 +228,14 @@ function needTilesMarkup(items, emptyMessage) {
   if (items.length === 0) {
     return `<p class="needs-empty">${emptyMessage}</p>`;
   }
-  return items.map(item => `<div class="need-tile-card"><div>${tileMarkup({ type: item.type }, { compact: true })}</div><div class="need-tile-count"><strong>${item.remaining}</strong><span>${item.remaining === 1 ? "copy" : "copies"} left</span></div></div>`).join("");
+  return items.map(item => `<div class="need-tile-card"><div>${tileMarkup({ type: item.type }, { compact: true })}</div><div class="need-tile-count"><strong>${item.remaining}</strong></div></div>`).join("");
 }
 
 function renderEastAnalysis(analysis) {
   const sequenceTiles = analysis.improvementTiles.filter(item => item.createsSequence);
   const otherTiles = analysis.improvementTiles.filter(item => !item.createsSequence);
-  const knownCount = analysis.visibleCounts.reduce((total, count) => total + count, 0);
   elements.analysisDistance.textContent = distanceMarkup(analysis);
-  elements.analysisImprovementCount.textContent = analysis.improvementCopies;
-  elements.analysisKnownCount.textContent = knownCount;
-  elements.analysisNote.textContent = state.activeSeat === 0 && !state.needsDraw && !state.terminal
-    ? "At a discard decision, these counts describe the hand after the recommended throw."
-    : "The counts include East's hand, every discard, and every exposed meld or kong.";
+  elements.analysisImprovementCount.textContent = `${analysis.improvementCopies} live`;
   const sequenceCopies = sequenceTiles.reduce((total, item) => total + item.remaining, 0);
   const otherCopies = otherTiles.reduce((total, item) => total + item.remaining, 0);
   elements.sequenceCount.textContent = `${sequenceCopies} live ${sequenceCopies === 1 ? "copy" : "copies"}`;
@@ -228,7 +296,10 @@ function renderPublicRiver() {
     return;
   }
   const action = state.lastAction;
-  const discardedTiles = state.players.flatMap(player => player.discards);
+  const historyDiscards = state.history.map(entry => entry.discardedTile).filter(Boolean);
+  const historyIds = new Set(historyDiscards.map(tile => tile.id));
+  const unrecordedDiscards = state.players.flatMap(player => player.discards).filter(tile => !historyIds.has(tile.id));
+  const discardedTiles = [...historyDiscards, ...unrecordedDiscards];
   elements.riverGrid.innerHTML = `<div class="river-lane-tiles">${discardedTiles.map(tile => tileMarkup(tile, { compact: true, claimed: state.claimedDiscardIds.includes(tile.id), drawn: action?.drawnTileIds?.includes(tile.id), discarded: action?.discardedTileId === tile.id })).join("") || "<span class=\"empty-inline\">none</span>"}</div>`;
 }
 
@@ -277,8 +348,6 @@ function renderBoardStatus() {
   elements.turn.textContent = state.turn;
   elements.liveWall.textContent = state.liveWall.length;
   elements.liveWallMeter.style.width = `${Math.max(0, Math.min(100, (state.liveWall.length / 69) * 100))}%`;
-  elements.replacement.textContent = state.replacementWall.length;
-  elements.dealSeed.textContent = state.seed;
 
   if (state.terminal) {
     elements.boardTitle.textContent = state.terminal.winner === null ? "Table complete" : `${state.players[state.terminal.winner].name} wins`;
