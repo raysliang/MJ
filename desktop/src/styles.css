@@ -1786,10 +1786,6 @@ kbd {
 }
 
 @media (max-width: 560px) {
-  body {
-    min-width: 0;
-  }
-
   :root {
     --tile-width: 2.2rem;
     --tile-height: 3rem;
@@ -1854,19 +1850,11 @@ kbd {
     font-size: 2rem;
   }
 
-  .hand-row {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    align-items: end;
-    gap: 0.28rem;
-  }
-
   .hand-row .tile {
-    width: 100%;
-    height: auto;
-    flex-basis: auto;
-    aspect-ratio: 0.73;
-    font-size: 1.6rem;
+    width: 1.9rem;
+    height: 2.6rem;
+    flex-basis: 1.9rem;
+    font-size: 1.65rem;
   }
 
   .tile-compact {
@@ -1874,26 +1862,6 @@ kbd {
     height: 2.55rem;
     flex-basis: 1.85rem;
     font-size: 1.5rem;
-  }
-
-  .meld-row {
-    gap: 0.45rem;
-  }
-
-  .river-lane-tiles {
-    min-height: 2.55rem;
-    overflow: visible;
-  }
-
-  .need-tile-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .analysis-summary span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .tile-decision-tooltip {
@@ -1925,12 +1893,6 @@ kbd {
     flex-direction: column;
     gap: 0.3rem;
     line-height: 1.4;
-  }
-}
-
-@media (max-width: 360px) {
-  .need-tile-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
