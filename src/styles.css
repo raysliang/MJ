@@ -1732,6 +1732,11 @@ kbd {
 }
 
 @media (max-width: 860px) {
+  :root {
+    --mobile-tile-width: 1.55rem;
+    --mobile-tile-height: 2.15rem;
+  }
+
   .simulation-layout {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -1846,6 +1851,63 @@ kbd {
 
   .meter {
     height: 0.22rem;
+  }
+
+  .tile,
+  .tile-compact,
+  .hand-row .tile,
+  .need-tile-card .tile-compact {
+    width: var(--mobile-tile-width);
+    height: var(--mobile-tile-height);
+    flex-basis: var(--mobile-tile-width);
+    aspect-ratio: auto;
+    border-radius: 0.22rem;
+    color: #253238;
+    background: linear-gradient(145deg, #fffefa, #e8e3d8);
+    box-shadow: 0 2px 0 #beb5a6, 0 4px 8px rgba(27, 42, 49, 0.14);
+    font-size: 1.3rem;
+  }
+
+  .tile-characters {
+    color: #b33d36;
+    border-color: rgba(179, 61, 54, 0.28);
+    background: linear-gradient(145deg, #fffefa, #f3e4dc);
+  }
+
+  .tile-bamboo {
+    color: #1f6b50;
+    border-color: rgba(31, 107, 80, 0.3);
+    background: linear-gradient(145deg, #fffefa, #e3eee5);
+  }
+
+  .tile-dots {
+    color: #244563;
+    border-color: rgba(36, 69, 99, 0.3);
+    background: linear-gradient(145deg, #fffefa, #e8e9e4);
+  }
+
+  .tile-honor {
+    color: #252f33;
+    border-color: rgba(37, 47, 51, 0.28);
+    background: linear-gradient(145deg, #fffefa, #e8e3d8);
+  }
+
+  .tile-drawn {
+    box-shadow: 0 4px 0 var(--teal), 0 8px 12px rgba(11, 113, 107, 0.2);
+  }
+
+  .tile-drawn::before {
+    top: -0.62rem;
+    border-right-width: 0.28rem;
+    border-top-width: 0.34rem;
+    border-left-width: 0.28rem;
+  }
+
+  .tile-discard-target::after {
+    bottom: -0.62rem;
+    border-top-width: 0.34rem;
+    border-right-width: 0.28rem;
+    border-left-width: 0.28rem;
   }
 
   .seat-header {
@@ -2373,6 +2435,19 @@ kbd {
     width: 1.45rem;
     height: 2rem;
     font-size: 1.1rem;
+  }
+
+  .compact-hand-layout .hand-row .tile,
+  .compact-hand-layout .meld-row .tile-compact,
+  .compact-hand-layout .new-tile-slot .tile,
+  .need-tile-card .tile-compact,
+  .opponent-melds .tile-compact,
+  .discard-row .tile-compact {
+    width: var(--mobile-tile-width);
+    height: var(--mobile-tile-height);
+    flex-basis: var(--mobile-tile-width);
+    aspect-ratio: auto;
+    font-size: 1.3rem;
   }
 
   .need-tile-count strong {
