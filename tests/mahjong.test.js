@@ -180,6 +180,16 @@ test("an unpaired honor is preferred over a suited tile when completion distance
   assert.equal(decision.tile.type, 31);
 });
 
+test("an isolated honor beats a connected pair tile when distance ties", () => {
+  const concealed = hand([2, 3, 3, 4, 20, 25, 10, 11, 11, 13, 14, 15, 16, 32]);
+  const decision = chooseBestDiscard(concealed, [], tileCounts(concealed));
+  assert.equal(decision.tile.type, 32);
+  const green = decision.discardOptions.find(option => option.type === 32);
+  const fourCharacters = decision.discardOptions.find(option => option.type === 3);
+  assert.equal(green.structureScore > fourCharacters.structureScore, true);
+  assert.equal(green.improvementCopies < fourCharacters.improvementCopies, true);
+});
+
 test("discard explanations list all equally strong discard choices", () => {
   const types = [0, 1, 2, 9, 10, 11, 18, 19, 20, 27, 27, 31, 32];
   const concealed = types.map((type, id) => ({ id, type }));

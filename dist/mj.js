@@ -322,6 +322,9 @@
     if (left.analysis.tilesAway !== right.analysis.tilesAway) {
       return left.analysis.tilesAway < right.analysis.tilesAway ? -1 : 1;
     }
+    if (left.structureScore !== right.structureScore) {
+      return left.structureScore > right.structureScore ? -1 : 1;
+    }
     if (left.analysis.improvementCopies !== right.analysis.improvementCopies) {
       return left.analysis.improvementCopies > right.analysis.improvementCopies ? -1 : 1;
     }
@@ -334,7 +337,7 @@
     return typeOf(left.tile) - typeOf(right.tile);
   }
   function samePrimaryDiscardQuality(left, right) {
-    return left.analysis.tilesAway === right.analysis.tilesAway && left.analysis.improvementCopies === right.analysis.improvementCopies && left.analysis.improvementTiles.length === right.analysis.improvementTiles.length && left.weakness === right.weakness;
+    return left.analysis.tilesAway === right.analysis.tilesAway && left.weakness === right.weakness && left.structureScore === right.structureScore && left.analysis.improvementCopies === right.analysis.improvementCopies && left.analysis.improvementTiles.length === right.analysis.improvementTiles.length;
   }
   function summarizeDiscardCandidate(candidate, equivalent) {
     return {
@@ -344,6 +347,7 @@
       improvementCopies: candidate.analysis.improvementCopies,
       improvementTypes: candidate.analysis.improvementTiles.length,
       weakness: candidate.weakness,
+      structureScore: candidate.structureScore,
       structure: candidate.structure,
       equivalent
     };
@@ -366,6 +370,7 @@
         remaining,
         analysis: analyzeHand(remaining, melds, visibleCounts),
         weakness: weaknessScore(type, originalCounts),
+        structureScore: handStructureScore(tileCounts(remaining), melds.length),
         honorCount: TILE_TYPES[type].suited ? 0 : originalCounts[type],
         structure: structureLabel(type, originalCounts)
       };
@@ -571,6 +576,7 @@
       bestDiscard,
       tilesAway: bestDiscard.analysis.tilesAway,
       improvementCopies: bestDiscard.analysis.improvementCopies,
+      structureScore: bestDiscard.structureScore,
       bestTilesAway: bestDiscard.analysis.tilesAway,
       expectedTilesAway: bestDiscard.analysis.tilesAway,
       expectedImprovementCopies: bestDiscard.analysis.improvementCopies,
@@ -589,17 +595,20 @@
       meldsAfter
     };
   }
-  function callImprovesHand(call, currentAnalysis) {
+  function callImprovesHand(call, currentAnalysis, currentDiscard) {
     if (!call) {
       return false;
     }
-    return call.expectedTilesAway < currentAnalysis.tilesAway || call.expectedTilesAway === currentAnalysis.tilesAway && call.expectedImprovementCopies > currentAnalysis.improvementCopies;
+    const callStructure = call.structureScore ?? -Infinity;
+    const currentStructure = currentDiscard?.structureScore ?? -Infinity;
+    return call.expectedTilesAway < currentAnalysis.tilesAway || call.expectedTilesAway === currentAnalysis.tilesAway && (callStructure > currentStructure || callStructure === currentStructure && call.expectedImprovementCopies > currentAnalysis.improvementCopies);
   }
   function evaluateDiscardCall(state2, seatIndex, discardedTile) {
     const seat = state2.players[seatIndex];
     const type = typeOf(discardedTile);
     const visibleCounts = getPublicCounts(state2, seatIndex);
     const currentAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
+    const currentDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts);
     const counts = tileCounts(seat.concealed);
     const options = [];
     if (counts[type] >= 2) {
@@ -613,7 +622,7 @@
     }
     let bestCall = null;
     for (const option of options) {
-      if (!callImprovesHand(option, currentAnalysis)) {
+      if (!callImprovesHand(option, currentAnalysis, currentDiscard)) {
         continue;
       }
       if (compareBranchQuality(option, bestCall) < 0) {
@@ -790,8 +799,8 @@
     }
     return counts;
   }
-  function handStructureScore(counts) {
-    let score = 0;
+  function handStructureScore(counts, meldCount = 0) {
+    let score = meldCount * 6;
     for (let type = 0; type < TILE_COUNT; type += 1) {
       const count = counts[type];
       if (count >= 2) {
@@ -815,7 +824,7 @@
   function analyzeKeepableDraws(state2, perspectiveSeat = 0) {
     const seat = state2.players[perspectiveSeat];
     const visibleCounts = getPublicCounts(state2, perspectiveSeat);
-    const currentStructure = handStructureScore(tileCounts(seat.concealed));
+    const currentStructure = handStructureScore(tileCounts(seat.concealed), seat.melds.length);
     const keepableTiles = [];
     for (let type = 0; type < TILE_COUNT; type += 1) {
       const remaining = Math.max(0, COPIES_PER_TILE - Math.min(COPIES_PER_TILE, visibleCounts[type] ?? 0));
@@ -824,7 +833,7 @@
       }
       const drawnTile = { id: -1, type };
       const bestDiscard = chooseBestDiscard([...seat.concealed, drawnTile], seat.melds, visibleCounts);
-      const keptStructure = bestDiscard ? handStructureScore(tileCounts(bestDiscard.remaining)) : currentStructure;
+      const keptStructure = bestDiscard ? handStructureScore(tileCounts(bestDiscard.remaining), seat.melds.length) : currentStructure;
       if (bestDiscard && bestDiscard.tile.type !== type && keptStructure > currentStructure) {
         keepableTiles.push({ type, remaining, glyph: tileGlyph(type), name: tileName(type) });
       }
