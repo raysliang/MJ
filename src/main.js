@@ -144,7 +144,7 @@ function tileMarkup(tile, { compact = false, claimed = false, drawn = false, dis
   const label = hidden ? "Concealed tile" : `${tileEnglishName(type)} ${tileName(type)}`;
   const family = type < 9 ? "tile-characters" : type < 18 ? "tile-bamboo" : type < 27 ? "tile-dots" : "tile-honor";
   const classes = ["tile", family, `tile-type-${type}`, compact ? "tile-compact" : "", claimed ? "tile-claimed" : "", drawn ? "tile-drawn" : "", discarded ? "tile-discard-target" : "", taken ? "tile-taken" : "", alternative ? "tile-alternative" : "", decision ? "tile-has-decision" : "", inline ? "tile-inline" : ""].filter(Boolean).join(" ");
-  const decisionMarkup = decision ? `<span class="tile-decision-tooltip" role="tooltip"><strong>${decision.status}</strong><span>${decision.comparison}</span><small>${decision.structure} · ${decision.metrics}</small></span>` : "";
+  const decisionMarkup = decision ? `<span class="tile-decision-tooltip" role="tooltip"><span>${decision.comparison}</span></span>` : "";
   const discardMarker = discarded ? "<span class=\"discard-marker\" aria-hidden=\"true\"></span>" : "";
   return `<span class="${classes}" title="${label}"${decision ? " tabindex=\"0\"" : ""} aria-label="${label}">${tileFaceMarkup(type, glyph, hidden)}${discardMarker}${decisionMarkup}</span>`;
 }
@@ -305,45 +305,35 @@ function renderEastAnalysis(analysis) {
   const otherCopies = otherTiles.reduce((total, item) => total + item.remaining, 0);
   elements.sequenceCount.textContent = `${sequenceCopies} live ${sequenceCopies === 1 ? "copy" : "copies"}`;
   elements.otherCount.textContent = `${otherCopies} live ${otherCopies === 1 ? "copy" : "copies"}`;
-  elements.sequenceTiles.innerHTML = needTilesMarkup(sequenceTiles, "No live draw creates a new sequence.");
+  elements.sequenceTiles.innerHTML = needTilesMarkup(sequenceTiles, "");
   elements.otherTiles.innerHTML = otherTiles.length ? needTilesMarkup(otherTiles, "") : "";
 }
 
 function buildTileDecision(option, options, selectedId) {
   const selected = option.id === selectedId;
   const best = options.find(candidate => candidate.id === selectedId) ?? options[0];
-  const metrics = `${option.tilesAway} away · ${option.improvementCopies} live copies · ${option.improvementTypes} tile types`;
   if (selected) {
     return {
-      status: "Chosen throw",
-      comparison: "This is the deterministic best path from the visible hand and public tiles.",
-      structure: option.structure,
-      metrics
+      comparison: `Leaves ${option.tilesAway} away.`
     };
   }
   if (option.equivalent) {
     return {
-      status: "Equivalent throw",
-      comparison: "It preserves the same completion distance, live improvement count, and structural quality as the selected throw.",
-      structure: option.structure,
-      metrics
+      comparison: `Also leaves ${option.tilesAway} away.`
     };
   }
   let comparison;
   if (option.tilesAway > best.tilesAway) {
-    comparison = `Keep it: throwing this leaves the hand ${option.tilesAway} tiles away instead of ${best.tilesAway}.`;
+    comparison = `Leaves ${option.tilesAway} away instead of ${best.tilesAway}.`;
   } else if (option.improvementCopies < best.improvementCopies) {
-    comparison = `Keep it: the distance ties, but it leaves only ${option.improvementCopies} live improvement copies instead of ${best.improvementCopies}.`;
+    comparison = `Leaves ${option.improvementCopies} live improvements instead of ${best.improvementCopies}.`;
   } else if (option.improvementTypes < best.improvementTypes) {
-    comparison = `Keep it: the distance ties, but it has only ${option.improvementTypes} improvement tile types instead of ${best.improvementTypes}.`;
+    comparison = `Leaves ${option.improvementTypes} improvement types instead of ${best.improvementTypes}.`;
   } else {
-    comparison = "Keep it: its pair or sequence structure is stronger than the selected throw.";
+    comparison = "Keeps stronger structure.";
   }
   return {
-    status: "Keep this tile",
-    comparison,
-    structure: option.structure,
-    metrics
+    comparison
   };
 }
 
