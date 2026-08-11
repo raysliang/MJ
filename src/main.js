@@ -102,7 +102,13 @@ const TILE_ART_URLS = {
 };
 
 function localTileArtPath(type) {
-  return `./assets/tiles/tile-${String(type).padStart(2, "0")}.png`;
+  const localNames = [
+    "0101一萬.svg.webp", "0102二萬.svg.webp", "0103三萬.svg.webp", "0104四萬.svg.webp", "0105五萬.svg.webp", "0106六萬.svg.webp", "0107七萬.svg.webp", "0108八萬.svg.webp", "0109九萬.svg.webp",
+    "0201一餅.svg.webp", "0202二餅.svg.webp", "0203三餅.svg.webp", "0204四餅.svg.webp", "0205五餅.svg.webp", "0206六餅.svg.webp", "0207七餅.svg.webp", "0208八餅.svg.webp", "0209九餅.svg.webp",
+    "0301一條.svg.webp", "0302二條.svg.webp", "0303三條.svg.webp", "0304四條.svg.webp", "0305五條.svg.webp", "0306六條.svg.webp", "0307七條.svg.webp", "0308八條.svg.webp", "0309九條.svg.webp",
+    null, null, "0403南風.svg.webp", "0404北風.svg.webp", "0405中.svg.webp", "0406發.svg.webp", "0407白.svg.webp"
+  ];
+  return localNames[type] ? `./assets/tiles/${localNames[type]}` : "./assets/tiles/missing.webp";
 }
 
 function tileFaceMarkup(type, glyph, hidden) {
@@ -110,7 +116,7 @@ function tileFaceMarkup(type, glyph, hidden) {
     return `<span class="tile-face tile-back">${glyph}</span>`;
   }
   if (TILE_ART_URLS[type]) {
-    return `<img class="tile-art" src="${localTileArtPath(type)}" data-fallback="${TILE_ART_URLS[type]}" alt="" draggable="false" onerror="this.onerror=null;this.src=this.dataset.fallback">`;
+    return `<img class="tile-art" src="${localTileArtPath(type)}" data-fallback="${TILE_ART_URLS[type]}" alt="" draggable="false" onerror="if(this.src.endsWith('/missing.webp')){this.onerror=null;this.src=this.dataset.fallback}else{this.onerror=null;this.src=this.dataset.fallback}">`;
   }
   if (type >= 18 && type < 27) {
     const rank = type - 17;
@@ -215,11 +221,9 @@ function renderEastSeat() {
   const improvementTypes = new Set(analysis.improvementTiles.map(item => item.type));
   const keepableDraws = analyzeKeepableDraws(state, 0).tiles.filter(item => !improvementTypes.has(item.type));
   const keepableCopies = keepableDraws.reduce((total, item) => total + item.remaining, 0);
-  const drawHand = analyzedHandForDraws(analysis);
-  const drawMelds = seat.melds;
   elements.heldTileSummary.hidden = keepableDraws.length === 0;
   elements.heldCount.textContent = `${keepableCopies} live ${keepableCopies === 1 ? "tile" : "tiles"}`;
-  elements.heldTile.innerHTML = needTilesMarkup(keepableDraws, "", drawHand, drawMelds, analysis.visibleCounts);
+  elements.heldTile.innerHTML = needTilesMarkup(keepableDraws, "");
   renderEastAnalysis(analysis);
 }
 
@@ -268,17 +272,28 @@ function discardTilesForDraw(item, hand, melds, visibleCounts) {
     });
 }
 
-function needTilesMarkup(items, emptyMessage, hand, melds, visibleCounts) {
+function needTilesMarkup(items, emptyMessage) {
   if (items.length === 0) {
     return `<p class="needs-empty">${emptyMessage}</p>`;
   }
-  return items.map(item => {
-    const discardTiles = discardTilesForDraw(item, hand, melds, visibleCounts);
-    const tooltip = discardTiles.length
-      ? `<span class="draw-discard-tooltip" role="tooltip" aria-hidden="true">${discardTiles.map(tile => tileMarkup(tile, { compact: true })).join("")}</span>`
-      : "";
-    return `<div class="need-tile-card${discardTiles.length ? " has-draw-discard" : ""}"${discardTiles.length ? " tabindex=\"0\"" : ""} aria-label="${item.remaining} live tiles"><div>${tileMarkup({ type: item.type }, { compact: true })}</div><div class="need-tile-count"><strong>${item.remaining}</strong></div>${tooltip}</div>`;
-  }).join("");
+  return items.map(item => `<div class="need-tile-card has-draw-discard" data-draw-type="${item.type}" tabindex="0" aria-label="${item.remaining} live tiles"><div>${tileMarkup({ type: item.type }, { compact: true })}</div><div class="need-tile-count"><strong>${item.remaining}</strong></div></div>`).join("");
+}
+
+function renderDrawDiscardTooltip(card) {
+  if (card.querySelector(".draw-discard-tooltip")) {
+    return;
+  }
+  const analysis = analyzePlayer(state, 0);
+  const hand = analyzedHandForDraws(analysis);
+  const discardTiles = discardTilesForDraw({ type: Number(card.dataset.drawType) }, hand, state.players[0].melds, analysis.visibleCounts);
+  if (discardTiles.length === 0) {
+    return;
+  }
+  const tooltip = document.createElement("span");
+  tooltip.className = "draw-discard-tooltip";
+  tooltip.setAttribute("role", "tooltip");
+  tooltip.innerHTML = discardTiles.map(tile => tileMarkup(tile, { compact: true })).join("");
+  card.append(tooltip);
 }
 
 function renderEastAnalysis(analysis) {
@@ -287,12 +302,10 @@ function renderEastAnalysis(analysis) {
   elements.analysisImprovementCount.textContent = `${analysis.improvementCopies} live`;
   const sequenceCopies = sequenceTiles.reduce((total, item) => total + item.remaining, 0);
   const otherCopies = otherTiles.reduce((total, item) => total + item.remaining, 0);
-  const drawHand = analyzedHandForDraws(analysis);
-  const drawMelds = state.players[0].melds;
   elements.sequenceCount.textContent = `${sequenceCopies} live ${sequenceCopies === 1 ? "copy" : "copies"}`;
   elements.otherCount.textContent = `${otherCopies} live ${otherCopies === 1 ? "copy" : "copies"}`;
-  elements.sequenceTiles.innerHTML = needTilesMarkup(sequenceTiles, "No live draw creates a new sequence.", drawHand, drawMelds, analysis.visibleCounts);
-  elements.otherTiles.innerHTML = otherTiles.length ? needTilesMarkup(otherTiles, "", drawHand, drawMelds, analysis.visibleCounts) : "";
+  elements.sequenceTiles.innerHTML = needTilesMarkup(sequenceTiles, "No live draw creates a new sequence.");
+  elements.otherTiles.innerHTML = otherTiles.length ? needTilesMarkup(otherTiles, "") : "";
 }
 
 function buildTileDecision(option, options, selectedId) {
@@ -333,13 +346,6 @@ function buildTileDecision(option, options, selectedId) {
   };
 }
 
-function renderEvents() {
-  const events = state.lastAction?.events ?? [];
-  elements.eventList.innerHTML = events.length
-    ? events.map(event => `<div class="event-line"><span aria-hidden="true">•</span>${event}</div>`).join("")
-    : "";
-}
-
 function renderPublicRiver() {
   const hasDiscards = state.players.some(player => player.discards.length > 0);
   if (!hasDiscards) {
@@ -352,44 +358,6 @@ function renderPublicRiver() {
   const unrecordedDiscards = state.players.flatMap(player => player.discards).filter(tile => !historyIds.has(tile.id));
   const discardedTiles = [...historyDiscards, ...unrecordedDiscards];
   elements.riverGrid.innerHTML = `<div class="river-lane-tiles">${discardedTiles.map(tile => tileMarkup(tile, { compact: true, claimed: state.claimedDiscardIds.includes(tile.id), drawn: action?.drawnTileIds?.includes(tile.id), discarded: action?.discardedTileId === tile.id })).join("") || "<span class=\"empty-inline\">none</span>"}</div>`;
-}
-
-function actionTilesMarkup(tiles, options = {}) {
-  return tiles?.length
-    ? tiles.map(tile => `<span class="action-tile">${tileMarkup(tile, { inline: true, ...options })}</span>`).join("")
-    : "";
-}
-
-function renderActionSummary() {
-  const action = state.lastAction;
-  renderEquivalentDiscards(action);
-  if (!action) {
-    elements.drawSummary.innerHTML = "<span class=\"action-empty\">Opening hand</span>";
-    elements.throwSummary.innerHTML = "<span class=\"action-empty\">Choose a discard</span>";
-    return;
-  }
-
-  if (action.callFromPrevious) {
-    const taken = action.callFromPrevious.takenTile ? actionTilesMarkup([action.callFromPrevious.takenTile], { taken: true }) : "";
-    const replacement = actionTilesMarkup(action.callFromPrevious.drawnTiles, { drawn: true });
-    elements.drawSummary.innerHTML = `${taken}${replacement}<small class="action-note">taken${replacement ? " + replacement" : ""}</small>`;
-    elements.throwSummary.innerHTML = action.discardedTile
-      ? actionTilesMarkup([action.discardedTile], { discarded: true })
-      : "<span class=\"action-empty\">Winning hand</span>";
-    return;
-  }
-
-  elements.drawSummary.innerHTML = actionTilesMarkup(action.drawnTiles, { drawn: true }) || "<span class=\"action-empty\">No draw · opening hand</span>";
-  elements.throwSummary.innerHTML = action.discardedTile
-    ? actionTilesMarkup([action.discardedTile], { discarded: true })
-    : "<span class=\"action-empty\">Winning hand</span>";
-}
-
-function renderEquivalentDiscards(action) {
-  const equivalents = action?.equivalentDiscards ?? [];
-  const visible = equivalents.length > 1;
-  elements.equivalentSummary.hidden = !visible;
-  elements.equivalentThrows.innerHTML = visible ? actionTilesMarkup(equivalents, { alternative: true }) : "";
 }
 
 function renderBoardStatus() {
@@ -408,71 +376,6 @@ function renderBoardStatus() {
     elements.next.disabled = false;
   }
   elements.previous.disabled = timeline.length <= 1;
-}
-
-function escapeHtml(value) {
-  return value.replace(/[&<>"']/g, character => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  })[character]);
-}
-
-function explanationMarkup(text) {
-  let markup = escapeHtml(text);
-  for (let type = 0; type < 34; type += 1) {
-    markup = markup.split(tileGlyph(type)).join(tileMarkup({ type }, { inline: true }));
-  }
-  return markup;
-}
-
-function renderExplanation() {
-  const explanation = state.lastAction?.explanation;
-  elements.explanation.innerHTML = explanationMarkup(explanation || "East begins with the only fourteen-tile hand. Press Next to inspect the first public-information decision.");
-}
-
-function positionTooltip(anchor) {
-  const tooltip = anchor.querySelector(".needed-preview, .tile-decision-tooltip");
-  if (!tooltip) {
-    return;
-  }
-
-  const anchorRect = anchor.getBoundingClientRect();
-  const viewportPadding = 12;
-  const gap = 12;
-  const prefersAbove = tooltip.classList.contains("tile-decision-tooltip");
-  tooltip.style.position = "absolute";
-  tooltip.style.left = "0px";
-  tooltip.style.top = "0px";
-  tooltip.style.right = "auto";
-  tooltip.style.bottom = "auto";
-  tooltip.style.transform = "none";
-
-  const tooltipRect = tooltip.getBoundingClientRect();
-  const spaceAbove = anchorRect.top - viewportPadding;
-  const spaceBelow = window.innerHeight - anchorRect.bottom - viewportPadding;
-  const fitsAbove = spaceAbove >= tooltipRect.height + gap;
-  const fitsBelow = spaceBelow >= tooltipRect.height + gap;
-  const placeAbove = prefersAbove ? fitsAbove || !fitsBelow : !fitsBelow && fitsAbove;
-  let top = placeAbove
-    ? anchorRect.top - tooltipRect.height - gap
-    : anchorRect.bottom + gap;
-  let left = anchorRect.left + ((anchorRect.width - tooltipRect.width) / 2);
-
-  top = Math.max(viewportPadding, Math.min(top, window.innerHeight - viewportPadding - tooltipRect.height));
-  left = Math.max(viewportPadding, Math.min(left, window.innerWidth - viewportPadding - tooltipRect.width));
-  tooltip.style.left = `${Math.round(left - anchorRect.left)}px`;
-  tooltip.style.top = `${Math.round(top - anchorRect.top)}px`;
-}
-
-function tooltipAnchor(target) {
-  return target instanceof Element ? target.closest(".needed-summary-trigger, .tile-has-decision") : null;
-}
-
-function repositionVisibleTooltips() {
-  document.querySelectorAll(".needed-summary-trigger:hover, .needed-summary-trigger:focus-visible, .tile-has-decision:hover, .tile-has-decision:focus-visible").forEach(positionTooltip);
 }
 
 function formatTileCodes(tiles, { markClaimed = false } = {}) {
@@ -513,19 +416,19 @@ function buildPositionPrompt() {
     ? [
         "Move under review:",
         `  Actor: ${reviewSeat.name}`,
+        `  Draw: ${formatTileCodes(action.drawnTiles)}`,
         `  Throw: ${action.discardedTile ? describeTile(action.discardedTile) : `none (${action.kind})`}`,
         `  Description: ${action.discardedTile ? `${reviewSeat.name} throws ${describeTile(action.discardedTile)}.` : `${reviewSeat.name} makes a ${action.kind} action.`}`,
         ...(action.call ? [`  Response: ${state.players[action.call.seatIndex].name} calls ${action.call.kind} on ${describeTile(action.call.takenTile)}.`] : []),
         ...(action.callFromPrevious ? [`  Prior call: ${state.players[action.callFromPrevious.seatIndex].name} called ${action.callFromPrevious.kind} on ${describeTile(action.callFromPrevious.takenTile)}.`] : []),
-        `  Simulation note: ${action.explanation}`,
-        `Question: Why is this the best move for ${reviewSeat.name}? Compare it with the other legal discards or calls and explain the hand-building tradeoffs.`
+        `  Simulation note: ${action.explanation}`
       ]
     : [
         "Move under review:",
         "  Actor: East",
+        "  Draw: none recorded at this position.",
         "  Throw: no East move recorded at this position.",
-        "  Description: East's concealed hand is the only private hand included.",
-        "Question: What should East do next, and why? Compare the legal alternatives using only public information."
+        "  Description: East's concealed hand is the only private hand included."
       ];
 
   return [
@@ -601,21 +504,18 @@ document.addEventListener("keydown", event => {
 });
 
 document.addEventListener("pointerover", event => {
-  const anchor = tooltipAnchor(event.target);
-  if (anchor && !(event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget))) {
-    positionTooltip(anchor);
+  const card = event.target instanceof Element ? event.target.closest(".need-tile-card.has-draw-discard") : null;
+  if (card) {
+    renderDrawDiscardTooltip(card);
   }
 });
 
 document.addEventListener("focusin", event => {
-  const anchor = tooltipAnchor(event.target);
-  if (anchor) {
-    positionTooltip(anchor);
+  const card = event.target instanceof Element ? event.target.closest(".need-tile-card.has-draw-discard") : null;
+  if (card) {
+    renderDrawDiscardTooltip(card);
   }
 });
-
-document.addEventListener("scroll", repositionVisibleTooltips, true);
-window.addEventListener("resize", repositionVisibleTooltips);
 
 async function copyText(text) {
   if (location.protocol !== "file:") {
