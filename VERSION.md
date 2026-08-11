@@ -1,12 +1,10 @@
-# Version 2 Mobile
+# Current Build
 
-This folder is the phone-optimized v2 build, tuned for an iPhone 17 Pro Max-sized CSS viewport of approximately 440px wide.
+The root app is the only supported build and is optimized for mobile-sized viewports.
 
-Tile layout bounds:
+- Local entrypoint: `index.html`
+- Source: `src/main.js`, `src/mahjong.js`, and `src/styles.css`
+- Generated bundle: `dist/mj.js`
+- Published app: `https://raysliang.github.io/MJ/`
 
-- East hand: 0-14 tiles, seven columns with wrapping.
-- Meld rows: 0-16 tiles, meld groups wrap as units.
-- River lanes: 0-25 tiles per player, tiles wrap within each lane.
-- Improvement groups: 0-34 tiles, three columns at phone width and two columns below 360px.
-
-Run it with `launch.bat` from this folder.
+The former `/versions/mobile/` URL is retained only as a redirect to the root app. There are no separate v1 or v2 runnable copies.

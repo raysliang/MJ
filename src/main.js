@@ -4,6 +4,7 @@ import {
   chooseBestDiscard,
   createGame,
   nextTurn,
+  sortTiles,
   tileCode,
   tileEnglishName,
   tileGlyph,
@@ -396,10 +397,20 @@ function describeTile(tile) {
   return `${tileCode(tile)} (${tileEnglishName(tile)})`;
 }
 
+function promptHandTiles(action, reviewSeat) {
+  const hand = [...(action?.handBeforeDiscard ?? reviewSeat.concealed)];
+  const discardedTile = action?.discardedTile;
+  if (!discardedTile || hand.some(tile => tile.id === discardedTile.id)) {
+    return hand;
+  }
+  return sortTiles([...hand, discardedTile]);
+}
+
 function buildPositionPrompt() {
   const action = state.lastAction?.seatIndex === 0 ? state.lastAction : null;
   const reviewSeat = state.players[0];
   const currentPlayer = state.players[state.activeSeat];
+  const promptHand = promptHandTiles(action, reviewSeat);
   const boardLines = state.players.map(player => `  ${player.name}: ${formatTileCodes(player.discards, { markClaimed: true })}`);
   const meldLines = state.players.map(player => `  ${player.name}: ${formatMelds(player.melds)}`);
   const rules = [
@@ -446,7 +457,7 @@ function buildPositionPrompt() {
     ...meldLines,
     "",
     "East hand used for analysis:",
-    `  Concealed: ${formatTileCodes(action?.handBeforeDiscard ?? reviewSeat.concealed)}`,
+    `  Concealed: ${formatTileCodes(promptHand)}`,
     `  Open melds: ${formatMelds(reviewSeat.melds)}`,
     "",
     ...moveLines,
