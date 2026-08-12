@@ -1415,7 +1415,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 06:10 UTC";
+  var BUILD_VERSION = "2026-08-12 06:12 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1638,7 +1638,7 @@
     const actionOptions = pending?.options.filter((option) => option.kind !== "discard") ?? [];
     elements.userDecisionPanel.hidden = actionOptions.length === 0;
     elements.userDecisionActions.innerHTML = actionOptions.map((option) => `<button class="button button-secondary user-decision-button" type="button" data-user-kind="${option.kind}" data-user-type="${option.type ?? ""}">${option.label}</button>`).join("");
-    const selectableTypes = new Set(pending.options.filter((option) => option.kind === "discard").map((option) => option.type));
+    const selectableTypes = new Set((pending?.options ?? []).filter((option) => option.kind === "discard").map((option) => option.type));
     document.querySelectorAll("#hand-0 .tile, #new-tile-0 .tile").forEach((tileElement) => {
       const type = Number(tileElement.className.match(/tile-type-(\d+)/)?.[1]);
       if (!selectableTypes.has(type)) {
