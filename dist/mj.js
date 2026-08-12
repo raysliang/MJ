@@ -44,6 +44,7 @@
   var SEAT_NAMES = ["East", "South", "West", "North"];
   var TILE_COUNT = 34;
   var COPIES_PER_TILE = 4;
+  var shantenCache = /* @__PURE__ */ new Map();
   var TILE_TYPES = Object.freeze([
     ...Array.from({ length: 27 }, (_, type) => Object.freeze({
       type,
@@ -133,6 +134,11 @@
     return counts;
   }
   function calculateShantenFromCounts(counts, openMeldCount = 0) {
+    const cacheKey = `${openMeldCount}:${counts.join("")}`;
+    const cached = shantenCache.get(cacheKey);
+    if (cached !== void 0) {
+      return cached;
+    }
     const targetMelds = Math.max(0, 4 - openMeldCount);
     let best = 8 - openMeldCount * 2;
     function search(start, melds, taatsu, pair) {
@@ -194,6 +200,7 @@
       }
     }
     search(0, 0, 0, 0);
+    shantenCache.set(cacheKey, best);
     return best;
   }
   function calculateShanten(tilesOrCounts, openMeldCount = 0) {
@@ -315,12 +322,31 @@
     }
     return "isolated suited tile; several sequence tiles can help";
   }
+  function compareRolloutQuality(left, right) {
+    if (!left.rollout || !right.rollout) {
+      return 0;
+    }
+    if (Math.abs(left.rollout.expectedTilesAway - right.rollout.expectedTilesAway) > 1e-9) {
+      return left.rollout.expectedTilesAway < right.rollout.expectedTilesAway ? -1 : 1;
+    }
+    if (Math.abs(left.rollout.expectedImprovementCopies - right.rollout.expectedImprovementCopies) > 1e-9) {
+      return left.rollout.expectedImprovementCopies > right.rollout.expectedImprovementCopies ? -1 : 1;
+    }
+    if (Math.abs(left.rollout.expectedImprovementTypes - right.rollout.expectedImprovementTypes) > 1e-9) {
+      return left.rollout.expectedImprovementTypes > right.rollout.expectedImprovementTypes ? -1 : 1;
+    }
+    return 0;
+  }
   function compareDiscardCandidates(left, right) {
     if (!right) {
       return -1;
     }
     if (left.analysis.tilesAway !== right.analysis.tilesAway) {
       return left.analysis.tilesAway < right.analysis.tilesAway ? -1 : 1;
+    }
+    const rolloutQuality = compareRolloutQuality(left, right);
+    if (rolloutQuality !== 0) {
+      return rolloutQuality;
     }
     if (left.structureScore !== right.structureScore) {
       return left.structureScore > right.structureScore ? -1 : 1;
@@ -337,7 +363,7 @@
     return typeOf(left.tile) - typeOf(right.tile);
   }
   function samePrimaryDiscardQuality(left, right) {
-    return left.analysis.tilesAway === right.analysis.tilesAway && left.weakness === right.weakness && left.structureScore === right.structureScore && left.analysis.improvementCopies === right.analysis.improvementCopies && left.analysis.improvementTiles.length === right.analysis.improvementTiles.length;
+    return left.analysis.tilesAway === right.analysis.tilesAway && compareRolloutQuality(left, right) === 0 && left.weakness === right.weakness && left.structureScore === right.structureScore && left.analysis.improvementCopies === right.analysis.improvementCopies && left.analysis.improvementTiles.length === right.analysis.improvementTiles.length;
   }
   function summarizeDiscardCandidate(candidate, equivalent) {
     return {
@@ -349,10 +375,54 @@
       weakness: candidate.weakness,
       structureScore: candidate.structureScore,
       structure: candidate.structure,
+      rollout: candidate.rollout,
       equivalent
     };
   }
-  function chooseBestDiscard(concealedTiles, melds = [], visibleCounts) {
+  function evaluateDiscardRollout(candidate, melds, visibleCounts) {
+    let totalCopies = 0;
+    let weightedTilesAway = 0;
+    let weightedImprovementCopies = 0;
+    let weightedImprovementTypes = 0;
+    const immediateImprovements = new Map(candidate.analysis.improvementTiles.map((item) => [item.type, item]));
+    for (let type = 0; type < TILE_COUNT; type += 1) {
+      const remaining = Math.max(0, COPIES_PER_TILE - Math.min(COPIES_PER_TILE, visibleCounts[type] ?? 0));
+      if (remaining === 0) {
+        continue;
+      }
+      totalCopies += remaining;
+      if (!immediateImprovements.has(type)) {
+        weightedTilesAway += candidate.analysis.tilesAway * remaining;
+        weightedImprovementCopies += candidate.analysis.improvementCopies * remaining;
+        weightedImprovementTypes += candidate.analysis.improvementTiles.length * remaining;
+        continue;
+      }
+      const visibleAfterDraw = [...visibleCounts];
+      visibleAfterDraw[type] = (visibleAfterDraw[type] ?? 0) + 1;
+      const drawnHand = [...candidate.remaining, { id: -1, type }];
+      const nextAnalysis = analyzeHand(drawnHand, melds, visibleAfterDraw);
+      const nextDiscard = nextAnalysis.complete ? null : chooseBestDiscard(drawnHand, melds, visibleAfterDraw, { lookahead: false });
+      const resultingAnalysis = nextDiscard?.analysis ?? nextAnalysis;
+      weightedTilesAway += resultingAnalysis.tilesAway * remaining;
+      weightedImprovementCopies += resultingAnalysis.improvementCopies * remaining;
+      weightedImprovementTypes += resultingAnalysis.improvementTiles.length * remaining;
+    }
+    if (totalCopies === 0) {
+      return {
+        expectedTilesAway: Infinity,
+        expectedImprovementCopies: 0,
+        expectedImprovementTypes: 0,
+        totalCopies: 0
+      };
+    }
+    return {
+      expectedTilesAway: weightedTilesAway / totalCopies,
+      expectedImprovementCopies: weightedImprovementCopies / totalCopies,
+      expectedImprovementTypes: weightedImprovementTypes / totalCopies,
+      totalCopies
+    };
+  }
+  function chooseBestDiscard(concealedTiles, melds = [], visibleCounts, { lookahead = true } = {}) {
     const original = [...concealedTiles];
     const originalCounts = tileCounts(original);
     let best = null;
@@ -381,6 +451,15 @@
     }
     if (!best) {
       return null;
+    }
+    const minimumTilesAway = Math.min(...candidates.map((candidate) => candidate.analysis.tilesAway));
+    if (lookahead) {
+      for (const candidate of candidates) {
+        if (candidate.analysis.tilesAway === minimumTilesAway) {
+          candidate.rollout = evaluateDiscardRollout(candidate, melds, visibleCounts);
+        }
+      }
+      best = candidates.reduce((current, candidate) => compareDiscardCandidates(candidate, current) < 0 ? candidate : current, null);
     }
     const optimalDiscards = candidates.filter((candidate) => samePrimaryDiscardQuality(candidate, best));
     const optimalTypes = new Set(optimalDiscards.map((candidate) => typeOf(candidate.tile)));
@@ -419,7 +498,7 @@
       const drawnTiles = [...concealedTiles, { id: -1, type }];
       const visibleAfterDraw = [...visibleCounts];
       visibleAfterDraw[type] = (visibleAfterDraw[type] ?? 0) + 1;
-      const analysis = isWinningHand(drawnTiles, melds) ? analyzeHand(drawnTiles, melds, visibleAfterDraw) : chooseBestDiscard(drawnTiles, melds, visibleAfterDraw)?.analysis;
+      const analysis = isWinningHand(drawnTiles, melds) ? analyzeHand(drawnTiles, melds, visibleAfterDraw) : chooseBestDiscard(drawnTiles, melds, visibleAfterDraw, { lookahead: false })?.analysis;
       if (!analysis) {
         continue;
       }
@@ -512,18 +591,21 @@
   function buildDiscardExplanation(seat, candidate, beforeAnalysis) {
     const tile = tileGlyph(candidate.tile);
     const liveImprovements = `${candidate.analysis.improvementCopies} live copies across ${candidate.analysis.improvementTiles.length} tile type${candidate.analysis.improvementTiles.length === 1 ? "" : "s"}`;
+    const futureProjection = candidate.rollout ? ` A one-draw rollout projects ${candidate.rollout.expectedTilesAway.toFixed(2)} tiles away after the next draw and best discard, with ${candidate.rollout.expectedImprovementCopies.toFixed(1)} expected follow-up copies.` : "";
     const distanceChange = beforeAnalysis.tilesAway === candidate.analysis.tilesAway ? `keeps the hand at ${candidate.analysis.tilesAway} tile${candidate.analysis.tilesAway === 1 ? "" : "s"} away` : `leaves the hand ${candidate.analysis.tilesAway} tile${candidate.analysis.tilesAway === 1 ? "" : "s"} away`;
     const structuralReason = candidate.honorCount === 1 ? "it is an unpaired honor with no sequence potential" : "the other tiles have stronger pair or sequence connections";
     const optimalDiscards = candidate.optimalDiscards ?? [candidate];
     const optimalList = optimalDiscards.map((option) => `${tileGlyph(option.tile)} ${tileName(option.tile)}`).join(", ");
     const alternatives = optimalDiscards.length > 1 ? ` The same completion path is preserved by these equally strong discards: ${optimalList}. The simulation chooses ${tile} deterministically.` : "";
-    return `${seat.name} discards ${tile} ${tileName(candidate.tile)} because ${structuralReason}; it ${distanceChange} with ${liveImprovements}. Hover any hand tile to compare every discard path.${alternatives}`;
+    return `${seat.name} discards ${tile} ${tileName(candidate.tile)} because ${structuralReason}; it ${distanceChange} with ${liveImprovements}.${futureProjection} Hover any hand tile to compare every discard path.${alternatives}`;
   }
   function chooseTurnAction(state2, seatIndex = state2.activeSeat) {
     const seat = state2.players[seatIndex];
     const visibleCounts = getPublicCounts(state2, seatIndex);
     const beforeAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
-    const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts);
+    const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, {
+      lookahead: state2.decisionModel !== "heuristic"
+    });
     let bestKong = null;
     for (const candidate of getKongCandidates(seat)) {
       const branch = evaluateKongCandidate(seat, candidate, visibleCounts);
@@ -563,10 +645,10 @@
       visibleCounts
     };
   }
-  function evaluatePongBranch(seat, type, visibleCounts) {
+  function evaluatePongBranch(seat, type, visibleCounts, { lookahead = true } = {}) {
     const removed = removeTilesOfType(seat.concealed, type, 2);
     const meldsAfter = [...seat.melds, { kind: "pong", type, open: true, source: "discard", tiles: [] }];
-    const bestDiscard = chooseBestDiscard(removed.kept, meldsAfter, visibleCounts);
+    const bestDiscard = chooseBestDiscard(removed.kept, meldsAfter, visibleCounts, { lookahead });
     if (!bestDiscard) {
       return null;
     }
@@ -607,12 +689,13 @@
     const seat = state2.players[seatIndex];
     const type = typeOf(discardedTile);
     const visibleCounts = getPublicCounts(state2, seatIndex);
+    const lookahead = state2.decisionModel !== "heuristic";
     const currentAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
-    const currentDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts);
+    const currentDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, { lookahead });
     const counts = tileCounts(seat.concealed);
     const options = [];
     if (counts[type] >= 2) {
-      const pong = evaluatePongBranch(seat, type, visibleCounts);
+      const pong = evaluatePongBranch(seat, type, visibleCounts, { lookahead });
       if (pong) {
         options.push(pong);
       }
@@ -832,7 +915,7 @@
         continue;
       }
       const drawnTile = { id: -1, type };
-      const bestDiscard = chooseBestDiscard([...seat.concealed, drawnTile], seat.melds, visibleCounts);
+      const bestDiscard = chooseBestDiscard([...seat.concealed, drawnTile], seat.melds, visibleCounts, { lookahead: false });
       const keptStructure = bestDiscard ? handStructureScore(tileCounts(bestDiscard.remaining), seat.melds.length) : currentStructure;
       if (bestDiscard && bestDiscard.tile.type !== type && keptStructure > currentStructure) {
         keepableTiles.push({ type, remaining, glyph: tileGlyph(type), name: tileName(type) });
@@ -1065,8 +1148,13 @@
   }
 
   // src/main.js
+  var requestedModel = new URLSearchParams(window.location.search).get("model");
+  var decisionModel = requestedModel === "heuristic" ? "heuristic" : "rollout";
+  var decisionModelLabel = decisionModel === "heuristic" ? "Immediate heuristic" : "Future-aware rollout";
+  document.title = `MJ Simulation | ${decisionModelLabel}`;
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
+    initialState.decisionModel = decisionModel;
     initialState.turn = 1;
     return nextTurn(initialState);
   }
@@ -1314,7 +1402,7 @@
     return seat.concealed;
   }
   function discardTilesForDraw(item, hand, melds, visibleCounts) {
-    const decision = chooseBestDiscard([...hand, { id: -1, type: item.type }], melds, visibleCounts);
+    const decision = chooseBestDiscard([...hand, { id: -1, type: item.type }], melds, visibleCounts, { lookahead: false });
     if (!decision) {
       return [];
     }
@@ -1454,7 +1542,8 @@
       "- Wins are by self-draw, except for robbing an added kong; ordinary discard wins are not used.",
       "- Decisions use only the acting hand and public tiles; opponent concealed hands are hidden.",
       "- No scores are tracked.",
-      "- Tile notation: m = characters, p = dots, s = bamboo; honors use east, south, west, north, red, green, white."
+      "- Tile notation: m = characters, p = dots, s = bamboo; honors use east, south, west, north, red, green, white.",
+      `Decision model: ${decisionModelLabel}.`
     ];
     const moveLines = action ? [
       "Move under review:",

@@ -190,6 +190,30 @@ test("an isolated honor beats a connected pair tile when distance ties", () => {
   assert.equal(green.improvementCopies < fourCharacters.improvementCopies, true);
 });
 
+test("one-turn rollout chooses 6m when keeping 8s preserves a 789 bamboo draw", () => {
+  const makeTiles = types => types.map((type, id) => ({ id, type }));
+  const concealed = makeTiles([5, 5, 6, 7, 9, 9, 13, 14, 25, 26, 26]);
+  const drawn = { id: 1000, type: 7 };
+  const unclaimed = makeTiles([
+    28, 21, 17, 16, 2, 32, 31, 25,
+    28, 32, 17, 17, 27, 8, 6,
+    24, 1, 1, 31, 29, 0, 12, 12,
+    29, 31, 31, 14, 16, 25, 25, 10
+  ]);
+  const meldTiles = makeTiles([8, 8, 8, 30, 30, 30, 27, 27, 27]);
+  const melds = [{ kind: "pong", type: 8, open: true, tiles: makeTiles([8, 8, 8]) }];
+  const decision = chooseBestDiscard([...concealed, drawn], melds, tileCounts([...concealed, drawn, ...unclaimed, ...meldTiles]));
+  const sixCharacters = decision.discardOptions.find(option => option.type === 5);
+  const eightBamboo = decision.discardOptions.find(option => option.type === 25);
+  assert.equal(decision.tile.type, 5);
+  assert.equal(sixCharacters.tilesAway, eightBamboo.tilesAway);
+  assert.equal(sixCharacters.rollout.expectedTilesAway < eightBamboo.rollout.expectedTilesAway, true);
+  assert.equal(sixCharacters.improvementCopies > eightBamboo.improvementCopies, true);
+  const afterSixCharacters = [...concealed, drawn].filter(tile => tile.id !== concealed[0].id);
+  const visible = tileCounts([...concealed, drawn, ...unclaimed, ...meldTiles]);
+  assert.equal(analyzeHand(afterSixCharacters, melds, visible).improvementTiles.some(item => item.type === 24), true);
+});
+
 test("discard explanations list all equally strong discard choices", () => {
   const types = [0, 1, 2, 9, 10, 11, 18, 19, 20, 27, 27, 31, 32];
   const concealed = types.map((type, id) => ({ id, type }));

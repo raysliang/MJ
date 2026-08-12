@@ -11,8 +11,14 @@ import {
   tileName
 } from "./mahjong.js";
 
+const requestedModel = new URLSearchParams(window.location.search).get("model");
+const decisionModel = requestedModel === "heuristic" ? "heuristic" : "rollout";
+const decisionModelLabel = decisionModel === "heuristic" ? "Immediate heuristic" : "Future-aware rollout";
+document.title = `MJ Simulation | ${decisionModelLabel}`;
+
 function createInitialState(seed) {
   const initialState = createGame(seed === undefined ? {} : { seed });
+  initialState.decisionModel = decisionModel;
   initialState.turn = 1;
   return nextTurn(initialState);
 }
@@ -257,7 +263,7 @@ function analyzedHandForDraws(analysis) {
 }
 
 function discardTilesForDraw(item, hand, melds, visibleCounts) {
-  const decision = chooseBestDiscard([...hand, { id: -1, type: item.type }], melds, visibleCounts);
+  const decision = chooseBestDiscard([...hand, { id: -1, type: item.type }], melds, visibleCounts, { lookahead: false });
   if (!decision) {
     return [];
   }
@@ -411,7 +417,8 @@ function buildPositionPrompt() {
     "- Wins are by self-draw, except for robbing an added kong; ordinary discard wins are not used.",
     "- Decisions use only the acting hand and public tiles; opponent concealed hands are hidden.",
     "- No scores are tracked.",
-    "- Tile notation: m = characters, p = dots, s = bamboo; honors use east, south, west, north, red, green, white."
+    "- Tile notation: m = characters, p = dots, s = bamboo; honors use east, south, west, north, red, green, white.",
+    `Decision model: ${decisionModelLabel}.`
   ];
   const moveLines = action
     ? [
