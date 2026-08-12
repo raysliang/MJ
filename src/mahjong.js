@@ -649,7 +649,7 @@ export function chooseTurnAction(state, seatIndex = state.activeSeat) {
   const visibleCounts = getPublicCounts(state, seatIndex);
   const beforeAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
   const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, {
-    lookahead: state.decisionModel !== "heuristic"
+    lookahead: true
   });
   let bestKong = null;
 
@@ -749,7 +749,7 @@ export function evaluateDiscardCall(state, seatIndex, discardedTile) {
   const seat = state.players[seatIndex];
   const type = typeOf(discardedTile);
   const visibleCounts = getPublicCounts(state, seatIndex);
-  const lookahead = state.decisionModel !== "heuristic";
+  const lookahead = true;
   const currentAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
   const currentDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, { lookahead });
   const counts = tileCounts(seat.concealed);

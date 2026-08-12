@@ -604,7 +604,7 @@
     const visibleCounts = getPublicCounts(state2, seatIndex);
     const beforeAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
     const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, {
-      lookahead: state2.decisionModel !== "heuristic"
+      lookahead: true
     });
     let bestKong = null;
     for (const candidate of getKongCandidates(seat)) {
@@ -689,7 +689,7 @@
     const seat = state2.players[seatIndex];
     const type = typeOf(discardedTile);
     const visibleCounts = getPublicCounts(state2, seatIndex);
-    const lookahead = state2.decisionModel !== "heuristic";
+    const lookahead = true;
     const currentAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
     const currentDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, { lookahead });
     const counts = tileCounts(seat.concealed);
@@ -1148,13 +1148,8 @@
   }
 
   // src/main.js
-  var requestedModel = new URLSearchParams(window.location.search).get("model");
-  var decisionModel = requestedModel === "heuristic" ? "heuristic" : "rollout";
-  var decisionModelLabel = decisionModel === "heuristic" ? "Immediate heuristic" : "Future-aware rollout";
-  document.title = `MJ Simulation | ${decisionModelLabel}`;
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
-    initialState.decisionModel = decisionModel;
     initialState.turn = 1;
     return nextTurn(initialState);
   }
@@ -1542,8 +1537,7 @@
       "- Wins are by self-draw, except for robbing an added kong; ordinary discard wins are not used.",
       "- Decisions use only the acting hand and public tiles; opponent concealed hands are hidden.",
       "- No scores are tracked.",
-      "- Tile notation: m = characters, p = dots, s = bamboo; honors use east, south, west, north, red, green, white.",
-      `Decision model: ${decisionModelLabel}.`
+      "- Tile notation: m = characters, p = dots, s = bamboo; honors use east, south, west, north, red, green, white."
     ];
     const moveLines = action ? [
       "Move under review:",
