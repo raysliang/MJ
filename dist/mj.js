@@ -614,9 +614,6 @@
         expectedImprovementCopies: branch.expectedImprovementCopies
       });
     }
-    if (isWinningHand(seat.concealed, seat.melds)) {
-      options.push({ kind: "selfDraw", label: "Declare self-draw" });
-    }
     return {
       phase: "turn",
       seatIndex,
@@ -1247,7 +1244,7 @@
     if (openingDraw) {
       drawnTiles.push(openingDraw);
     }
-    if (state2.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds) && (!state2.userControl || userSelection?.kind === "selfDraw")) {
+    if (state2.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds)) {
       state2.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by self-draw.` };
       const explanation2 = `${seat.name} completes four melds and a pair with the drawn hand. Self-draw is legal; ordinary discard wins are not used.`;
       state2.lastAction = {
@@ -1272,11 +1269,6 @@
       return state2;
     }
     if (!pendingUserTurn && state2.userControl && seatIndex === 0) {
-      if (isWinningHand(seat.concealed, seat.melds)) {
-        state2.turn = turnNumber;
-        state2.pendingUserDecision = buildUserTurnDecision(state2, seatIndex, pendingCall, turnNumber);
-        return state2;
-      }
       state2.turn = turnNumber;
       state2.pendingUserDecision = buildUserTurnDecision(state2, seatIndex, pendingCall, turnNumber);
       return state2;
@@ -1391,7 +1383,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:08 UTC";
+  var BUILD_VERSION = "2026-08-12 05:18 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1420,7 +1412,6 @@
     sequenceTiles: document.querySelector("#sequence-tiles"),
     otherTiles: document.querySelector("#other-tiles"),
     userDecisionPanel: document.querySelector("#user-decision-panel"),
-    userDecisionSummary: document.querySelector("#user-decision-summary"),
     userDecisionActions: document.querySelector("#user-decision-actions"),
     copyPosition: document.querySelector("#copy-position"),
     copyPositionLabel: document.querySelector("#copy-position-label")
@@ -1598,13 +1589,13 @@
   }
   function renderUserDecision() {
     const pending = state.pendingUserDecision;
-    elements.userDecisionPanel.hidden = !pending;
-    if (!pending) {
+    const actionOptions = pending?.options.filter((option) => option.kind !== "discard") ?? [];
+    elements.userDecisionPanel.hidden = actionOptions.length === 0;
+    if (actionOptions.length === 0) {
       elements.userDecisionActions.innerHTML = "";
       return;
     }
-    elements.userDecisionSummary.textContent = pending.phase === "call" ? "Choose how to respond to the discard." : "Choose East's move.";
-    elements.userDecisionActions.innerHTML = pending.options.filter((option) => option.kind !== "discard").map((option) => `<button class="button button-secondary user-decision-button" type="button" data-user-kind="${option.kind}" data-user-type="${option.type ?? ""}">${option.label}</button>`).join("");
+    elements.userDecisionActions.innerHTML = actionOptions.map((option) => `<button class="button button-secondary user-decision-button" type="button" data-user-kind="${option.kind}" data-user-type="${option.type ?? ""}">${option.label}</button>`).join("");
     const selectableTypes = new Set(pending.options.filter((option) => option.kind === "discard").map((option) => option.type));
     document.querySelectorAll("#hand-0 .tile").forEach((tileElement) => {
       const type = Number(tileElement.className.match(/tile-type-(\d+)/)?.[1]);

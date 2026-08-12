@@ -647,9 +647,6 @@ function buildUserTurnDecision(state, seatIndex, pendingCall = null, turn = stat
       expectedImprovementCopies: branch.expectedImprovementCopies
     });
   }
-  if (isWinningHand(seat.concealed, seat.melds)) {
-    options.push({ kind: "selfDraw", label: "Declare self-draw" });
-  }
   return {
     phase: "turn",
     seatIndex,
@@ -1364,8 +1361,7 @@ export function nextTurn(state) {
     drawnTiles.push(openingDraw);
   }
 
-  if (state.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds)
-    && (!state.userControl || userSelection?.kind === "selfDraw")) {
+  if (state.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds)) {
     state.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by self-draw.` };
     const explanation = `${seat.name} completes four melds and a pair with the drawn hand. Self-draw is legal; ordinary discard wins are not used.`;
     state.lastAction = {
@@ -1391,11 +1387,6 @@ export function nextTurn(state) {
   }
 
   if (!pendingUserTurn && state.userControl && seatIndex === 0) {
-    if (isWinningHand(seat.concealed, seat.melds)) {
-      state.turn = turnNumber;
-      state.pendingUserDecision = buildUserTurnDecision(state, seatIndex, pendingCall, turnNumber);
-      return state;
-    }
     state.turn = turnNumber;
     state.pendingUserDecision = buildUserTurnDecision(state, seatIndex, pendingCall, turnNumber);
     return state;

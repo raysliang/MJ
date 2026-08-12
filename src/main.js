@@ -43,7 +43,6 @@ const elements = {
   sequenceTiles: document.querySelector("#sequence-tiles"),
   otherTiles: document.querySelector("#other-tiles"),
   userDecisionPanel: document.querySelector("#user-decision-panel"),
-  userDecisionSummary: document.querySelector("#user-decision-summary"),
   userDecisionActions: document.querySelector("#user-decision-actions"),
   copyPosition: document.querySelector("#copy-position"),
   copyPositionLabel: document.querySelector("#copy-position-label")
@@ -213,16 +212,13 @@ function chooseUserDecision(choice) {
 
 function renderUserDecision() {
   const pending = state.pendingUserDecision;
-  elements.userDecisionPanel.hidden = !pending;
-  if (!pending) {
+  const actionOptions = pending?.options.filter(option => option.kind !== "discard") ?? [];
+  elements.userDecisionPanel.hidden = actionOptions.length === 0;
+  if (actionOptions.length === 0) {
     elements.userDecisionActions.innerHTML = "";
     return;
   }
-  elements.userDecisionSummary.textContent = pending.phase === "call"
-    ? "Choose how to respond to the discard."
-    : "Choose East's move.";
-  elements.userDecisionActions.innerHTML = pending.options
-    .filter(option => option.kind !== "discard")
+  elements.userDecisionActions.innerHTML = actionOptions
     .map(option => `<button class="button button-secondary user-decision-button" type="button" data-user-kind="${option.kind}" data-user-type="${option.type ?? ""}">${option.label}</button>`)
     .join("");
   const selectableTypes = new Set(pending.options.filter(option => option.kind === "discard").map(option => option.type));

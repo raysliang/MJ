@@ -349,6 +349,7 @@ test("a complete starting hand ends as a self-draw win", () => {
     { seatIndex: 3, name: "North", concealed: [], melds: [], discards: [] }
   ];
   const state = emptyState(players);
+  state.userControl = true;
   nextTurn(state);
   assert.equal(state.terminal.type, "selfDraw");
   assert.equal(state.terminal.winner, 0);
