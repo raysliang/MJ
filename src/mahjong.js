@@ -665,6 +665,7 @@ function buildUserCallDecision(state, seatIndex, discardedTile, discardingSeat) 
   const seat = state.players[seatIndex];
   const type = typeOf(discardedTile);
   const counts = tileCounts(seat.concealed);
+  const modelDecision = evaluateDiscardCall(state, seatIndex, discardedTile);
   const options = [{ kind: "pass", label: "Pass" }];
   if (counts[type] >= 2) {
     options.push({ kind: "pong", type, label: "Pong" });
@@ -673,7 +674,15 @@ function buildUserCallDecision(state, seatIndex, discardedTile, discardingSeat) 
     options.push({ kind: "exposedKong", type, label: "Kong" });
   }
   return options.length > 1
-    ? { phase: "call", seatIndex, discardingSeat, discardedTile, options }
+    ? {
+        phase: "call",
+        seatIndex,
+        discardingSeat,
+        discardedTile,
+        options,
+        recommendedKind: modelDecision.kind,
+        recommendedType: modelDecision.type ?? null
+      }
     : null;
 }
 

@@ -631,6 +631,7 @@
     const seat = state2.players[seatIndex];
     const type = typeOf(discardedTile);
     const counts = tileCounts(seat.concealed);
+    const modelDecision = evaluateDiscardCall(state2, seatIndex, discardedTile);
     const options = [{ kind: "pass", label: "Pass" }];
     if (counts[type] >= 2) {
       options.push({ kind: "pong", type, label: "Pong" });
@@ -638,7 +639,15 @@
     if (counts[type] >= 3) {
       options.push({ kind: "exposedKong", type, label: "Kong" });
     }
-    return options.length > 1 ? { phase: "call", seatIndex, discardingSeat, discardedTile, options } : null;
+    return options.length > 1 ? {
+      phase: "call",
+      seatIndex,
+      discardingSeat,
+      discardedTile,
+      options,
+      recommendedKind: modelDecision.kind,
+      recommendedType: modelDecision.type ?? null
+    } : null;
   }
   function evaluateKongCandidate(seat, candidate, visibleCounts) {
     let concealedAfter = seat.concealed;
@@ -1406,7 +1415,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:51 UTC";
+  var BUILD_VERSION = "2026-08-12 05:55 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1771,7 +1780,7 @@
       elements.next.disabled = true;
     } else {
       elements.boardTitle.textContent = pendingCallDisplay ? `${displayedPlayer.name} just acted` : `${activePlayer.name} to act`;
-      elements.next.disabled = state.pendingUserDecision?.phase === "call";
+      elements.next.disabled = false;
     }
     elements.previous.disabled = timeline.length <= 1;
   }
@@ -1862,6 +1871,13 @@
     renderPublicRiver();
   }
   elements.next.addEventListener("click", () => {
+    if (state.pendingUserDecision?.phase === "call" && state.pendingUserDecision.recommendedKind) {
+      chooseUserDecision({
+        kind: state.pendingUserDecision.recommendedKind,
+        ...state.pendingUserDecision.recommendedType === null ? {} : { type: state.pendingUserDecision.recommendedType }
+      });
+      return;
+    }
     if (state.pendingUserDecision?.phase === "turn" && state.pendingUserDecision.recommendedType !== null) {
       chooseUserDecision({ kind: "discard", type: state.pendingUserDecision.recommendedType });
       return;

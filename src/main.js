@@ -411,7 +411,7 @@ function renderBoardStatus() {
     elements.next.disabled = true;
   } else {
     elements.boardTitle.textContent = pendingCallDisplay ? `${displayedPlayer.name} just acted` : `${activePlayer.name} to act`;
-    elements.next.disabled = state.pendingUserDecision?.phase === "call";
+    elements.next.disabled = false;
   }
   elements.previous.disabled = timeline.length <= 1;
 }
@@ -512,6 +512,13 @@ function render() {
 }
 
 elements.next.addEventListener("click", () => {
+  if (state.pendingUserDecision?.phase === "call" && state.pendingUserDecision.recommendedKind) {
+    chooseUserDecision({
+      kind: state.pendingUserDecision.recommendedKind,
+      ...(state.pendingUserDecision.recommendedType === null ? {} : { type: state.pendingUserDecision.recommendedType })
+    });
+    return;
+  }
   if (state.pendingUserDecision?.phase === "turn" && state.pendingUserDecision.recommendedType !== null) {
     chooseUserDecision({ kind: "discard", type: state.pendingUserDecision.recommendedType });
     return;
