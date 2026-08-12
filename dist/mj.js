@@ -1415,7 +1415,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 06:06 UTC";
+  var BUILD_VERSION = "2026-08-12 06:10 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1612,12 +1612,19 @@
     elements.heldTile.innerHTML = needTilesMarkup(keepableDraws, "");
     renderEastAnalysis(analysis);
   }
-  function chooseUserDecision(choice) {
+  function chooseUserDecision(choice, resolveModelFollowUp = false) {
     if (!state.pendingUserDecision) {
       return;
     }
     state.userDecisionSelection = choice;
     state = nextTurn(state);
+    if (resolveModelFollowUp && state.pendingUserDecision?.phase === "turn") {
+      state.userDecisionSelection = {
+        kind: "discard",
+        type: state.pendingUserDecision.recommendedType
+      };
+      state = nextTurn(state);
+    }
     let automaticSteps = 0;
     while (!state.terminal && !state.pendingUserDecision && automaticSteps < 4) {
       state = nextTurn(state);
@@ -1875,7 +1882,7 @@
       chooseUserDecision({
         kind: state.pendingUserDecision.recommendedKind,
         ...state.pendingUserDecision.recommendedType === null ? {} : { type: state.pendingUserDecision.recommendedType }
-      });
+      }, true);
       return;
     }
     if (state.pendingUserDecision?.phase === "turn" && state.pendingUserDecision.recommendedType !== null) {

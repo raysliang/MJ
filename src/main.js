@@ -216,12 +216,19 @@ function renderEastSeat() {
   renderEastAnalysis(analysis);
 }
 
-function chooseUserDecision(choice) {
+function chooseUserDecision(choice, resolveModelFollowUp = false) {
   if (!state.pendingUserDecision) {
     return;
   }
   state.userDecisionSelection = choice;
   state = nextTurn(state);
+  if (resolveModelFollowUp && state.pendingUserDecision?.phase === "turn") {
+    state.userDecisionSelection = {
+      kind: "discard",
+      type: state.pendingUserDecision.recommendedType
+    };
+    state = nextTurn(state);
+  }
   let automaticSteps = 0;
   while (!state.terminal && !state.pendingUserDecision && automaticSteps < 4) {
     state = nextTurn(state);
@@ -516,7 +523,7 @@ elements.next.addEventListener("click", () => {
     chooseUserDecision({
       kind: state.pendingUserDecision.recommendedKind,
       ...(state.pendingUserDecision.recommendedType === null ? {} : { type: state.pendingUserDecision.recommendedType })
-    });
+    }, true);
     return;
   }
   if (state.pendingUserDecision?.phase === "turn" && state.pendingUserDecision.recommendedType !== null) {
