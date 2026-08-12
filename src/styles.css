@@ -98,6 +98,8 @@ button,
 }
 
 .winner-banner {
+  position: relative;
+  z-index: 40;
   margin: 0.7rem auto 0;
   padding: 0.8rem 1rem;
   border: 2px solid var(--marigold);

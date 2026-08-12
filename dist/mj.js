@@ -1415,7 +1415,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:55 UTC";
+  var BUILD_VERSION = "2026-08-12 06:06 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1774,7 +1774,7 @@
     elements.liveWall.textContent = state.liveWall.length;
     elements.liveWallMeter.style.width = `${Math.max(0, Math.min(100, state.liveWall.length / 69 * 100))}%`;
     elements.winnerBanner.hidden = !state.terminal;
-    elements.winnerBanner.textContent = state.terminal ? state.terminal.winner === null ? "Table Complete" : state.terminal.winner === 0 ? "You Won" : `${state.players[state.terminal.winner].name} Wins` : "";
+    elements.winnerBanner.textContent = state.terminal ? state.terminal.winner === null ? "Wall Ended - No Winner" : state.terminal.winner === 0 ? "You Won" : `${state.players[state.terminal.winner].name} Wins` : "";
     if (state.terminal) {
       elements.boardTitle.textContent = state.terminal.winner === null ? "Table complete" : `${state.players[state.terminal.winner].name} won`;
       elements.next.disabled = true;

@@ -398,7 +398,7 @@ function renderBoardStatus() {
   elements.winnerBanner.hidden = !state.terminal;
   elements.winnerBanner.textContent = state.terminal
     ? state.terminal.winner === null
-      ? "Table Complete"
+      ? "Wall Ended - No Winner"
       : state.terminal.winner === 0
         ? "You Won"
         : `${state.players[state.terminal.winner].name} Wins`
