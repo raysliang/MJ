@@ -1275,7 +1275,7 @@
     }
     if (!pendingUserTurn && state2.userControl && seatIndex === 0) {
       state2.turn = turnNumber;
-      state2.pendingUserDecision = buildUserTurnDecision(state2, seatIndex, pendingCall, turnNumber);
+      state2.pendingUserDecision = buildUserTurnDecision(state2, seatIndex, pendingCall, turnNumber, drawnTiles);
       return state2;
     }
     if (userSelection && userSelection.kind !== "selfDraw") {
@@ -1394,7 +1394,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:32 UTC";
+  var BUILD_VERSION = "2026-08-12 05:38 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1523,7 +1523,7 @@
   }
   function distanceMarkup(analysis) {
     if (analysis.complete) {
-      return "Complete";
+      return "Winning hand";
     }
     return `${analysis.tilesAway} ${analysis.tilesAway === 1 ? "tile" : "tiles"}`;
   }
@@ -1567,7 +1567,7 @@
     card.classList.toggle("is-finished", Boolean(state.terminal) && !winner);
     card.setAttribute("aria-current", active ? "step" : "false");
     document.querySelector("#seat-state-0").textContent = stateLabel;
-    document.querySelector("#seat-distance-0").textContent = `${distanceMarkup(analysis)} to win`;
+    document.querySelector("#seat-distance-0").textContent = analysis.complete ? distanceMarkup(analysis) : `${distanceMarkup(analysis)} to win`;
     const compactHandLayout = card.querySelector(".compact-hand-layout");
     compactHandLayout.classList.toggle("has-melds", seat.melds.length > 0);
     document.querySelector("#hand-0").innerHTML = displayHandTiles.map((tile) => tileMarkup(tile, {
@@ -1752,7 +1752,7 @@
     elements.liveWall.textContent = state.liveWall.length;
     elements.liveWallMeter.style.width = `${Math.max(0, Math.min(100, state.liveWall.length / 69 * 100))}%`;
     if (state.terminal) {
-      elements.boardTitle.textContent = state.terminal.winner === null ? "Table complete" : `${state.players[state.terminal.winner].name} wins`;
+      elements.boardTitle.textContent = state.terminal.winner === null ? "Table complete" : `${state.players[state.terminal.winner].name} won`;
       elements.next.disabled = true;
     } else {
       elements.boardTitle.textContent = pendingCallDisplay ? `${displayedPlayer.name} just acted` : `${activePlayer.name} to act`;

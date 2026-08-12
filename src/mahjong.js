@@ -1394,7 +1394,7 @@ export function nextTurn(state) {
 
   if (!pendingUserTurn && state.userControl && seatIndex === 0) {
     state.turn = turnNumber;
-    state.pendingUserDecision = buildUserTurnDecision(state, seatIndex, pendingCall, turnNumber);
+    state.pendingUserDecision = buildUserTurnDecision(state, seatIndex, pendingCall, turnNumber, drawnTiles);
     return state;
   }
 
