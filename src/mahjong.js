@@ -612,7 +612,7 @@ function getKongCandidates(seat) {
   return candidates;
 }
 
-function buildUserTurnDecision(state, seatIndex, pendingCall = null, turn = state.turn + 1) {
+function buildUserTurnDecision(state, seatIndex, pendingCall = null, turn = state.turn + 1, drawnTiles = []) {
   const seat = state.players[seatIndex];
   const visibleCounts = getPublicCounts(state, seatIndex);
   const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, {
@@ -652,6 +652,8 @@ function buildUserTurnDecision(state, seatIndex, pendingCall = null, turn = stat
     seatIndex,
     turn,
     pendingCall,
+    drawnTiles,
+    drawnTileIds: drawnTiles.map(tile => tile.id),
     options,
     discardOptions: bestDiscard?.discardOptions ?? [],
     recommendedType: bestDiscard?.tile ? typeOf(bestDiscard.tile) : null,
@@ -665,10 +667,10 @@ function buildUserCallDecision(state, seatIndex, discardedTile, discardingSeat) 
   const counts = tileCounts(seat.concealed);
   const options = [{ kind: "pass", label: "Pass" }];
   if (counts[type] >= 2) {
-    options.push({ kind: "pong", type, label: `Pong ${tileGlyph(type)} ${tileName(type)}` });
+    options.push({ kind: "pong", type, label: "Pong" });
   }
   if (counts[type] >= 3) {
-    options.push({ kind: "exposedKong", type, label: `Kong ${tileGlyph(type)} ${tileName(type)}` });
+    options.push({ kind: "exposedKong", type, label: "Kong" });
   }
   return options.length > 1
     ? { phase: "call", seatIndex, discardingSeat, discardedTile, options }
@@ -1034,7 +1036,7 @@ function applyUserCallChoice(state, pending, choice) {
     }
   }
 
-  state.pendingUserDecision = buildUserTurnDecision(state, pending.seatIndex, callInfo, state.turn + 1);
+  state.pendingUserDecision = buildUserTurnDecision(state, pending.seatIndex, callInfo, state.turn + 1, callInfo.drawnTiles);
   return true;
 }
 
@@ -1317,13 +1319,16 @@ export function nextTurn(state) {
   const turnNumber = pendingUserTurn?.turn ?? state.turn + 1;
   const events = [];
   let discardCallMade = false;
-  let drawnTiles = [];
+  let drawnTiles = [...(pendingUserTurn?.drawnTiles ?? [])];
   let handBeforeDiscard = null;
   let discardedTile = null;
   let callInfo = null;
   let equivalentDiscards = [];
   let discardOptions = [];
   const pendingCall = pendingUserTurn?.pendingCall ?? state.pendingCall;
+  if (userSelection?.kind === "concealedKong" || userSelection?.kind === "addedKong") {
+    drawnTiles = [];
+  }
   state.pendingUserDecision = null;
   state.userDecisionSelection = null;
   const wasDrawRequired = state.needsDraw;
@@ -1352,6 +1357,7 @@ export function nextTurn(state) {
   state.needsDraw = false;
   handBeforeDiscard = sortTiles(seat.concealed);
   const openingDraw = seatIndex === 0
+    && !pendingUserTurn
     && state.turn <= 1
     && !wasDrawRequired
     && seat.concealed.length === 14
@@ -1393,6 +1399,7 @@ export function nextTurn(state) {
   }
 
   if (userSelection && userSelection.kind !== "selfDraw") {
+    state.userActionOverrides ??= {};
     state.userActionOverrides[seatIndex] = userSelection;
   }
 
@@ -1440,6 +1447,13 @@ export function nextTurn(state) {
         state.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by drawing the replacement tile after a concealed kong.` };
       }
     }
+  }
+
+  if (!state.terminal && state.userControl && seatIndex === 0
+    && (decision.kind === "addedKong" || decision.kind === "concealedKong")) {
+    state.turn = turnNumber;
+    state.pendingUserDecision = buildUserTurnDecision(state, seatIndex, pendingCall, turnNumber, drawnTiles);
+    return state;
   }
 
   if (!state.terminal) {

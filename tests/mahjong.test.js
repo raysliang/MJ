@@ -83,6 +83,23 @@ test("user-controlled East exposes the recommended discard for Next", () => {
   assert.equal(state.lastAction.discardedTile.type, recommended);
 });
 
+test("user-controlled kong exposes its replacement tile before discard", () => {
+  const players = [
+    { seatIndex: 0, name: "East", concealed: hand([0, 0, 0, 0, 1, 2, 3, 9, 10, 11, 18, 19, 20, 27]), melds: [], discards: [] },
+    { seatIndex: 1, name: "South", concealed: [], melds: [], discards: [] },
+    { seatIndex: 2, name: "West", concealed: [], melds: [], discards: [] },
+    { seatIndex: 3, name: "North", concealed: [], melds: [], discards: [] }
+  ];
+  const state = emptyState(players);
+  state.userControl = true;
+  state.replacementWall = [tile(33)];
+  nextTurn(state);
+  state.userDecisionSelection = { kind: "concealedKong", type: 0 };
+  nextTurn(state);
+  assert.equal(state.pendingUserDecision.phase, "turn");
+  assert.deepEqual(state.pendingUserDecision.drawnTiles.map(tile => tile.type), [33]);
+});
+
 test("standard hands with concealed sequences are complete", () => {
   const winning = hand([
     0, 1, 2,

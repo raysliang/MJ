@@ -579,7 +579,7 @@
     }
     return candidates;
   }
-  function buildUserTurnDecision(state2, seatIndex, pendingCall = null, turn = state2.turn + 1) {
+  function buildUserTurnDecision(state2, seatIndex, pendingCall = null, turn = state2.turn + 1, drawnTiles = []) {
     const seat = state2.players[seatIndex];
     const visibleCounts = getPublicCounts(state2, seatIndex);
     const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, {
@@ -619,6 +619,8 @@
       seatIndex,
       turn,
       pendingCall,
+      drawnTiles,
+      drawnTileIds: drawnTiles.map((tile) => tile.id),
       options,
       discardOptions: bestDiscard?.discardOptions ?? [],
       recommendedType: bestDiscard?.tile ? typeOf(bestDiscard.tile) : null,
@@ -631,10 +633,10 @@
     const counts = tileCounts(seat.concealed);
     const options = [{ kind: "pass", label: "Pass" }];
     if (counts[type] >= 2) {
-      options.push({ kind: "pong", type, label: `Pong ${tileGlyph(type)} ${tileName(type)}` });
+      options.push({ kind: "pong", type, label: "Pong" });
     }
     if (counts[type] >= 3) {
-      options.push({ kind: "exposedKong", type, label: `Kong ${tileGlyph(type)} ${tileName(type)}` });
+      options.push({ kind: "exposedKong", type, label: "Kong" });
     }
     return options.length > 1 ? { phase: "call", seatIndex, discardingSeat, discardedTile, options } : null;
   }
@@ -951,7 +953,7 @@
         return true;
       }
     }
-    state2.pendingUserDecision = buildUserTurnDecision(state2, pending.seatIndex, callInfo, state2.turn + 1);
+    state2.pendingUserDecision = buildUserTurnDecision(state2, pending.seatIndex, callInfo, state2.turn + 1, callInfo.drawnTiles);
     return true;
   }
   function markClaimedDiscard(state2, tile, bySeat) {
@@ -1207,13 +1209,16 @@
     const turnNumber = pendingUserTurn?.turn ?? state2.turn + 1;
     const events = [];
     let discardCallMade = false;
-    let drawnTiles = [];
+    let drawnTiles = [...pendingUserTurn?.drawnTiles ?? []];
     let handBeforeDiscard = null;
     let discardedTile = null;
     let callInfo = null;
     let equivalentDiscards = [];
     let discardOptions = [];
     const pendingCall = pendingUserTurn?.pendingCall ?? state2.pendingCall;
+    if (userSelection?.kind === "concealedKong" || userSelection?.kind === "addedKong") {
+      drawnTiles = [];
+    }
     state2.pendingUserDecision = null;
     state2.userDecisionSelection = null;
     const wasDrawRequired = state2.needsDraw;
@@ -1240,7 +1245,7 @@
     }
     state2.needsDraw = false;
     handBeforeDiscard = sortTiles(seat.concealed);
-    const openingDraw = seatIndex === 0 && state2.turn <= 1 && !wasDrawRequired && seat.concealed.length === 14 ? handBeforeDiscard[handBeforeDiscard.length - 1] : null;
+    const openingDraw = seatIndex === 0 && !pendingUserTurn && state2.turn <= 1 && !wasDrawRequired && seat.concealed.length === 14 ? handBeforeDiscard[handBeforeDiscard.length - 1] : null;
     if (openingDraw) {
       drawnTiles.push(openingDraw);
     }
@@ -1274,6 +1279,7 @@
       return state2;
     }
     if (userSelection && userSelection.kind !== "selfDraw") {
+      state2.userActionOverrides ??= {};
       state2.userActionOverrides[seatIndex] = userSelection;
     }
     const decision = chooseTurnAction(state2, seatIndex);
@@ -1317,6 +1323,11 @@
           state2.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by drawing the replacement tile after a concealed kong.` };
         }
       }
+    }
+    if (!state2.terminal && state2.userControl && seatIndex === 0 && (decision.kind === "addedKong" || decision.kind === "concealedKong")) {
+      state2.turn = turnNumber;
+      state2.pendingUserDecision = buildUserTurnDecision(state2, seatIndex, pendingCall, turnNumber, drawnTiles);
+      return state2;
     }
     if (!state2.terminal) {
       handBeforeDiscard = sortTiles(seat.concealed);
@@ -1383,7 +1394,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:21 UTC";
+  var BUILD_VERSION = "2026-08-12 05:28 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1538,7 +1549,8 @@
     const drawnTileIds = showingPreDiscardHand ? lastAction.drawnTileIds ?? [] : [];
     const openingAction = lastAction?.seatIndex === 0 && lastAction.turn === 1 && !lastAction.drawnTiles?.length;
     const openingTile = handTiles.length === 14 && (!lastAction && state.turn === 0 || openingAction) ? handTiles[handTiles.length - 1] : null;
-    const newTileIds = drawnTileIds.length ? drawnTileIds : openingTile ? [openingTile.id] : [];
+    const pendingDrawnTileIds = state.pendingUserDecision?.phase === "turn" ? state.pendingUserDecision.drawnTileIds ?? [] : [];
+    const newTileIds = drawnTileIds.length ? drawnTileIds : pendingDrawnTileIds.length ? pendingDrawnTileIds : openingTile ? [openingTile.id] : [];
     const displayHandTiles = handTiles.filter((tile) => !newTileIds.includes(tile.id));
     const displayDrawnTiles = handTiles.filter((tile) => newTileIds.includes(tile.id));
     const discardedTileId = showingPreDiscardHand ? lastAction.discardedTileId : null;
@@ -1703,15 +1715,38 @@
     }
     const action = state.lastAction;
     const publicMeldTileIds = new Set(publicMelds.flatMap(({ meld }) => meld.tiles.map((tile) => tile.id)));
-    const historyDiscards = state.history.map((entry) => entry.discardedTile).filter(Boolean);
-    const historyIds = new Set(historyDiscards.map((tile) => tile.id));
-    const unrecordedDiscards = state.players.flatMap((player) => player.discards).filter((tile) => !historyIds.has(tile.id));
-    const discardedTiles = [...historyDiscards, ...unrecordedDiscards].filter((tile) => !publicMeldTileIds.has(tile.id));
-    const meldMarkup = publicMelds.map(({ player, meld }) => {
+    const riverItems = [];
+    const renderedMelds = /* @__PURE__ */ new Set();
+    for (const entry of state.history) {
+      const call = entry.call;
+      if (call && call.seatIndex > 0 && call.takenTileId !== void 0) {
+        const publicMeld = publicMelds.find(({ player, meld }) => player.seatIndex === call.seatIndex && meld.tiles.some((tile) => tile.id === call.takenTileId));
+        if (publicMeld && !renderedMelds.has(publicMeld.meld)) {
+          riverItems.push({ kind: "meld", ...publicMeld });
+          renderedMelds.add(publicMeld.meld);
+        }
+      }
+      if (entry.discardedTile && !state.claimedDiscardIds.includes(entry.discardedTile.id) && !publicMeldTileIds.has(entry.discardedTile.id)) {
+        riverItems.push({ kind: "discard", tile: entry.discardedTile });
+      }
+    }
+    for (const publicMeld of publicMelds) {
+      if (!renderedMelds.has(publicMeld.meld)) {
+        riverItems.push({ kind: "meld", ...publicMeld });
+      }
+    }
+    const historyIds = new Set(state.history.map((entry) => entry.discardedTile?.id).filter((id) => id !== void 0));
+    for (const tile of state.players.flatMap((player) => player.discards)) {
+      if (!historyIds.has(tile.id) && !state.claimedDiscardIds.includes(tile.id) && !publicMeldTileIds.has(tile.id)) {
+        riverItems.push({ kind: "discard", tile });
+      }
+    }
+    const meldMarkup = riverItems.map((item) => item.kind === "meld" ? (() => {
+      const { player, meld } = item;
       const label = meld.kind === "kong" ? "Kong" : "Pong";
       return `<span class="river-public-meld" title="${label} \xB7 ${player.name}">${meld.tiles.map((tile) => tileMarkup(tile, { compact: true })).join("")}</span>`;
-    }).join("");
-    elements.riverGrid.innerHTML = `<div class="river-lane-tiles">${meldMarkup}${discardedTiles.map((tile) => tileMarkup(tile, { compact: true, claimed: state.claimedDiscardIds.includes(tile.id), drawn: action?.drawnTileIds?.includes(tile.id), discarded: action?.discardedTileId === tile.id })).join("") || '<span class="empty-inline">none</span>'}</div>`;
+    })() : tileMarkup(item.tile, { compact: true, drawn: action?.drawnTileIds?.includes(item.tile.id), discarded: action?.discardedTileId === item.tile.id })).join("");
+    elements.riverGrid.innerHTML = `<div class="river-lane-tiles">${meldMarkup || '<span class="empty-inline">none</span>'}</div>`;
   }
   function renderBoardStatus() {
     const activePlayer = state.players[state.activeSeat];
