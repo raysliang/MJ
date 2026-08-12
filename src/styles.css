@@ -97,6 +97,25 @@ button,
   text-align: center;
 }
 
+.winner-banner {
+  margin: 0.7rem auto 0;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--marigold);
+  border-radius: 0.45rem;
+  color: #4a2b08;
+  background: var(--marigold-soft);
+  box-shadow: 0 5px 0 rgba(208, 146, 37, 0.2);
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 3vw, 1.7rem);
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.winner-banner[hidden] {
+  display: none;
+}
+
 .topbar,
 .turn-controls,
 .status-ribbon,

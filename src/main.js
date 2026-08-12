@@ -44,6 +44,7 @@ const elements = {
   otherTiles: document.querySelector("#other-tiles"),
   userDecisionPanel: document.querySelector("#user-decision-panel"),
   userDecisionActions: document.querySelector("#user-decision-actions"),
+  winnerBanner: document.querySelector("#winner-banner"),
   copyPosition: document.querySelector("#copy-position"),
   copyPositionLabel: document.querySelector("#copy-position-label")
 };
@@ -394,6 +395,14 @@ function renderBoardStatus() {
   elements.turn.textContent = state.turn;
   elements.liveWall.textContent = state.liveWall.length;
   elements.liveWallMeter.style.width = `${Math.max(0, Math.min(100, (state.liveWall.length / 69) * 100))}%`;
+  elements.winnerBanner.hidden = !state.terminal;
+  elements.winnerBanner.textContent = state.terminal
+    ? state.terminal.winner === null
+      ? "Table Complete"
+      : state.terminal.winner === 0
+        ? "You Won"
+        : `${state.players[state.terminal.winner].name} Wins`
+    : "";
 
   if (state.terminal) {
     elements.boardTitle.textContent = state.terminal.winner === null
