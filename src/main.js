@@ -89,7 +89,7 @@ function localTileArtPath(type) {
     "0101一萬.svg.webp", "0102二萬.svg.webp", "0103三萬.svg.webp", "0104四萬.svg.webp", "0105五萬.svg.webp", "0106六萬.svg.webp", "0107七萬.svg.webp", "0108八萬.svg.webp", "0109九萬.svg.webp",
     "0301一條.svg.webp", "0302二條.svg.webp", "0303三條.svg.webp", "0304四條.svg.webp", "0305五條.svg.webp", "0306六條.svg.webp", "0307七條.svg.webp", "0308八條.svg.webp", "0309九條.svg.webp",
     "0201一餅.svg.webp", "0202二餅.svg.webp", "0203三餅.svg.webp", "0204四餅.svg.webp", "0205五餅.svg.webp", "0206六餅.svg.webp", "0207七餅.svg.webp", "0208八餅.svg.webp", "0209九餅.svg.webp",
-    null, null, "0403南風.svg.webp", "0404北風.svg.webp", "0405中.svg.webp", "0406發.svg.webp", "0407白.svg.webp"
+    "0401東風.svg.webp", "0403南風.svg.webp", "0402西風.svg.webp", "0404北風.svg.webp", "0405中.svg.webp", "0406發.svg.webp", "0407白.svg.webp"
   ];
   return localNames[type] ? `./assets/tiles/${localNames[type]}` : "./assets/tiles/missing.webp";
 }

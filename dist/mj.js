@@ -1191,7 +1191,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 04:18 UTC";
+  var BUILD_VERSION = "2026-08-12 04:27 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1287,9 +1287,9 @@
       "0207\u4E03\u9905.svg.webp",
       "0208\u516B\u9905.svg.webp",
       "0209\u4E5D\u9905.svg.webp",
-      null,
-      null,
+      "0401\u6771\u98A8.svg.webp",
       "0403\u5357\u98A8.svg.webp",
+      "0402\u897F\u98A8.svg.webp",
       "0404\u5317\u98A8.svg.webp",
       "0405\u4E2D.svg.webp",
       "0406\u767C.svg.webp",
