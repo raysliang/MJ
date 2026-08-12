@@ -330,28 +330,10 @@ h2 {
   z-index: 30;
 }
 
-.seat-north {
-  grid-area: north;
-  --seat-accent: var(--plum);
-  --seat-soft: var(--plum-soft);
-}
-
-.seat-west {
-  grid-area: west;
-  --seat-accent: var(--cobalt);
-  --seat-soft: var(--cobalt-soft);
-}
-
 .seat-east {
   grid-area: east;
   --seat-accent: var(--coral);
   --seat-soft: var(--coral-soft);
-}
-
-.seat-south {
-  grid-area: south;
-  --seat-accent: var(--mint);
-  --seat-soft: var(--mint-soft);
 }
 
 .seat-card {
@@ -369,103 +351,6 @@ h2 {
 
 .east-seat-card {
   grid-area: east;
-}
-
-.opponent-strip {
-  grid-area: opponents;
-  display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
-  min-width: 0;
-}
-
-.opponent-card {
-  position: relative;
-  grid-area: auto;
-  min-width: 0;
-  padding: 0.8rem 0.85rem;
-  overflow: visible;
-  border: 1px solid var(--line-strong);
-  border-left: 4px solid var(--seat-accent);
-  border-radius: 0.45rem;
-  background: rgba(255, 253, 248, 0.78);
-  box-shadow: 0 4px 0 rgba(27, 42, 49, 0.035);
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, background 180ms ease;
-}
-
-.opponent-card.is-active {
-  border-color: var(--coral);
-  border-left-color: var(--coral);
-  background: #fff3cf;
-  box-shadow: 0 0 0 3px rgba(230, 93, 80, 0.14), 0 9px 18px rgba(230, 93, 80, 0.12);
-  transform: translateY(-2px);
-}
-
-.opponent-card.is-next {
-  border-color: rgba(11, 113, 107, 0.42);
-  border-left-color: var(--teal);
-  border-style: dashed;
-}
-
-.opponent-card.is-winner {
-  border-color: var(--marigold);
-  border-left-color: var(--marigold);
-  background: var(--marigold-soft);
-}
-
-.opponent-card.is-finished {
-  opacity: 0.68;
-}
-
-.opponent-card .seat-direction {
-  font-size: 0.56rem;
-}
-
-.opponent-card h2 {
-  margin: 0.18rem 0 0;
-  font-size: 1.15rem;
-}
-
-.opponent-card .seat-state {
-  font-size: 0.56rem;
-}
-
-.opponent-card-heading,
-.opponent-public-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-}
-
-.opponent-public-line {
-  margin-top: 0.55rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.opponent-public-line strong {
-  color: var(--teal-deep);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-}
-
-.opponent-melds {
-  min-height: 2.9rem;
-  margin-top: 0.45rem;
-  overflow-x: auto;
-}
-
-.opponent-melds .meld-row {
-  min-height: 2.7rem;
-}
-
-.opponent-melds .meld-group {
-  padding-block: 0.1rem;
 }
 
 .seat-card:has(.tile-has-decision:hover),
@@ -1813,15 +1698,8 @@ h2 {
 
   .table-stage {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
-    grid-template-areas:
-      "east"
-      "opponents";
-  }
-
-  .opponent-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: auto;
+    grid-template-areas: "east";
   }
 
   .board-center {
@@ -1947,71 +1825,8 @@ h2 {
   .table-stage {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
-    grid-template-areas:
-      "east"
-      "opponents";
+    grid-template-areas: "east";
     padding: 0.4rem;
-  }
-
-  .opponent-strip {
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(3, auto);
-    gap: 0.15rem;
-  }
-
-  .opponent-card {
-    padding: 0.2rem 0;
-    border: 0;
-    border-bottom: 1px solid var(--line);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .opponent-meld-line {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    min-width: 0;
-  }
-
-  .opponent-meld-line > strong {
-    flex: 0 0 auto;
-    color: var(--seat-accent);
-    font-family: var(--font-mono);
-    font-size: 0.55rem;
-  }
-
-  .opponent-melds {
-    flex: 1 1 auto;
-    min-width: 0;
-    min-height: 1.9rem;
-    margin: 0;
-    overflow-x: auto;
-  }
-
-  .opponent-melds .meld-row {
-    min-height: 1.9rem;
-    flex-wrap: nowrap;
-  }
-
-  .opponent-melds .meld-label,
-  .opponent-melds .empty-inline {
-    display: none;
-  }
-
-  .opponent-melds .meld-group {
-    flex: 0 0 auto;
-    padding: 0;
-    border: 0;
-    background: transparent;
-  }
-
-  .opponent-melds .tile-compact {
-    width: 1.3rem;
-    height: 1.8rem;
-    flex-basis: 1.3rem;
-    font-size: 1rem;
   }
 
   .seat-card,
@@ -2284,7 +2099,6 @@ h2 {
   .compact-hand-layout .meld-row .tile-compact,
   .compact-hand-layout .new-tile-slot .tile,
   .need-tile-card .tile-compact,
-  .opponent-melds .tile-compact,
   .discard-row .tile-compact {
     width: var(--mobile-tile-width);
     height: var(--mobile-tile-height);
@@ -2505,21 +2319,6 @@ h2 {
     border-left-width: 0.28rem;
   }
 
-  .opponent-card {
-    height: 3.3rem;
-    min-height: 3.3rem;
-    overflow: hidden;
-  }
-
-  .opponent-melds {
-    height: 2.5rem;
-    min-height: 2.5rem;
-  }
-
-  .opponent-melds .meld-row {
-    height: 2.35rem;
-    min-height: 2.35rem;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

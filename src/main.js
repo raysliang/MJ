@@ -228,25 +228,6 @@ function renderEastSeat() {
   renderEastAnalysis(analysis);
 }
 
-function renderOpponentSeat(seatIndex) {
-  const seat = state.players[seatIndex];
-  const card = document.querySelector(`#opponent-${seatIndex}`);
-  const lastAction = state.lastAction;
-  const focusSeatIndex = lastAction?.displaySeatIndex ?? state.activeSeat;
-  const active = !state.terminal && focusSeatIndex === seatIndex;
-  const next = !state.terminal && Boolean(lastAction) && state.activeSeat === seatIndex && !active;
-  const winner = state.terminal?.winner === seatIndex;
-  const stateLabel = state.terminal
-    ? winner ? "Winner" : "Finished"
-    : active ? "Acting" : next ? "Next" : "Waiting";
-
-  card.classList.toggle("is-active", active);
-  card.classList.toggle("is-next", next);
-  card.classList.toggle("is-winner", winner);
-  card.classList.toggle("is-finished", Boolean(state.terminal) && !winner);
-  document.querySelector(`#opponent-label-${seatIndex}`).textContent = `${seat.name} [${seat.concealed.length}]:`;
-}
-
 function analyzedHandForDraws(analysis) {
   const seat = state.players[0];
   if (state.activeSeat === 0 && !state.needsDraw && !state.terminal) {
@@ -457,9 +438,6 @@ function buildPositionPrompt() {
 
 function render() {
   renderEastSeat();
-  for (let seatIndex = 1; seatIndex < state.players.length; seatIndex += 1) {
-    renderOpponentSeat(seatIndex);
-  }
   renderBoardStatus();
   renderPublicRiver();
 }
