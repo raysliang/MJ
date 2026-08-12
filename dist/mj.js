@@ -994,6 +994,7 @@
     let equivalentDiscards = [];
     let discardOptions = [];
     const pendingCall = state2.pendingCall;
+    const wasDrawRequired = state2.needsDraw;
     state2.pendingCall = null;
     state2.lastDraw = null;
     if (state2.needsDraw) {
@@ -1017,6 +1018,10 @@
     }
     state2.needsDraw = false;
     handBeforeDiscard = sortTiles(seat.concealed);
+    const openingDraw = seatIndex === 0 && state2.turn <= 1 && !wasDrawRequired && seat.concealed.length === 14 ? handBeforeDiscard[handBeforeDiscard.length - 1] : null;
+    if (openingDraw) {
+      drawnTiles.push(openingDraw);
+    }
     if (state2.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds)) {
       state2.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by self-draw.` };
       const explanation2 = `${seat.name} completes four melds and a pair with the drawn hand. Self-draw is legal; ordinary discard wins are not used.`;
@@ -1150,7 +1155,6 @@
   // src/main.js
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
-    initialState.turn = 1;
     return nextTurn(initialState);
   }
   var state = createInitialState();
@@ -1333,7 +1337,7 @@
     const showingPreDiscardHand = lastAction?.seatIndex === 0 && Array.isArray(lastAction.handBeforeDiscard);
     const handTiles = showingPreDiscardHand ? lastAction.handBeforeDiscard : seat.concealed;
     const drawnTileIds = showingPreDiscardHand ? lastAction.drawnTileIds ?? [] : [];
-    const openingAction = lastAction?.seatIndex === 0 && lastAction.turn === 2 && !lastAction.drawnTiles?.length;
+    const openingAction = lastAction?.seatIndex === 0 && lastAction.turn === 1 && !lastAction.drawnTiles?.length;
     const openingTile = handTiles.length === 14 && (!lastAction && state.turn === 0 || openingAction) ? handTiles[handTiles.length - 1] : null;
     const newTileIds = drawnTileIds.length ? drawnTileIds : openingTile ? [openingTile.id] : [];
     const displayHandTiles = handTiles.filter((tile) => !newTileIds.includes(tile.id));

@@ -13,7 +13,6 @@ import {
 
 function createInitialState(seed) {
   const initialState = createGame(seed === undefined ? {} : { seed });
-  initialState.turn = 1;
   return nextTurn(initialState);
 }
 
@@ -178,7 +177,7 @@ function renderEastSeat() {
   const handTiles = showingPreDiscardHand ? lastAction.handBeforeDiscard : seat.concealed;
   const drawnTileIds = showingPreDiscardHand ? lastAction.drawnTileIds ?? [] : [];
   const openingAction = lastAction?.seatIndex === 0
-    && lastAction.turn === 2
+    && lastAction.turn === 1
     && !(lastAction.drawnTiles?.length);
   const openingTile = handTiles.length === 14
     && ((!lastAction && state.turn === 0) || openingAction)

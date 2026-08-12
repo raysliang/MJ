@@ -118,6 +118,8 @@ test("one Next transition records one turn and leaves a legal next phase", () =>
   assert.equal(state.turn, 1);
   assert.equal(state.history.length, 1);
   assert.equal(state.players[0].discards.length, 1);
+  assert.equal(state.lastAction.drawnTiles.length, 1);
+  assert.equal(state.lastAction.drawnTileIds[0], state.lastAction.drawnTiles[0].id);
   assert.equal(state.activeSeat >= 0 && state.activeSeat < 4, true);
   assert.equal(typeof state.needsDraw, "boolean");
 });

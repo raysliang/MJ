@@ -1087,6 +1087,7 @@ export function nextTurn(state) {
   let equivalentDiscards = [];
   let discardOptions = [];
   const pendingCall = state.pendingCall;
+  const wasDrawRequired = state.needsDraw;
   state.pendingCall = null;
   state.lastDraw = null;
 
@@ -1111,6 +1112,15 @@ export function nextTurn(state) {
   }
   state.needsDraw = false;
   handBeforeDiscard = sortTiles(seat.concealed);
+  const openingDraw = seatIndex === 0
+    && state.turn <= 1
+    && !wasDrawRequired
+    && seat.concealed.length === 14
+    ? handBeforeDiscard[handBeforeDiscard.length - 1]
+    : null;
+  if (openingDraw) {
+    drawnTiles.push(openingDraw);
+  }
 
   if (state.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds)) {
     state.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by self-draw.` };
