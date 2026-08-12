@@ -1388,7 +1388,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 04:50 UTC";
+  var BUILD_VERSION = "2026-08-12 05:05 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1513,9 +1513,8 @@
     const label = hidden ? "Concealed tile" : `${tileEnglishName(type)} ${tileName(type)}`;
     const family = type < 9 ? "tile-characters" : type < 18 ? "tile-bamboo" : type < 27 ? "tile-dots" : "tile-honor";
     const classes = ["tile", family, `tile-type-${type}`, compact ? "tile-compact" : "", claimed ? "tile-claimed" : "", drawn ? "tile-drawn" : "", discarded ? "tile-discard-target" : "", taken ? "tile-taken" : "", alternative ? "tile-alternative" : "", decision ? "tile-has-decision" : "", inline ? "tile-inline" : ""].filter(Boolean).join(" ");
-    const decisionMarkup = decision ? `<span class="tile-decision-tooltip" role="tooltip"><span>${decision.comparison}</span></span>` : "";
     const discardMarker = discarded ? '<span class="discard-marker" aria-hidden="true"></span>' : "";
-    return `<span class="${classes}" title="${label}"${decision ? ' tabindex="0"' : ""} aria-label="${label}">${tileFaceMarkup(type, glyph, hidden)}${discardMarker}${decisionMarkup}</span>`;
+    return `<span class="${classes}" title="${label}"${decision ? ' tabindex="0"' : ""} aria-label="${label}">${tileFaceMarkup(type, glyph, hidden)}${discardMarker}</span>`;
   }
   function distanceMarkup(analysis) {
     if (analysis.complete) {
