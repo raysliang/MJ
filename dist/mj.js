@@ -1406,7 +1406,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:47 UTC";
+  var BUILD_VERSION = "2026-08-12 05:51 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1589,12 +1589,12 @@
       alternative: equivalentDiscardTypes.has(tile.type) && tile.type !== selectedDiscardType,
       decision: discardOptionByType.get(tile.type) ? buildTileDecision(discardOptionByType.get(tile.type), discardOptions, discardedTileId) : null
     })).join("");
-    renderUserDecision();
     document.querySelector("#melds-0").innerHTML = renderMelds(seat);
     elements.newTile.innerHTML = displayDrawnTiles.map((tile) => tileMarkup(tile, {
       drawn: true,
       discarded: discardedTileId === tile.id || pendingRecommendationId === tile.id
     })).join("");
+    renderUserDecision();
     const improvementTypes = new Set(analysis.improvementTiles.map((item) => item.type));
     const keepableDraws = analyzeKeepableDraws(state, 0).tiles.filter((item) => !improvementTypes.has(item.type));
     const keepableCopies = keepableDraws.reduce((total, item) => total + item.remaining, 0);
@@ -1623,7 +1623,7 @@
     elements.userDecisionPanel.hidden = actionOptions.length === 0;
     elements.userDecisionActions.innerHTML = actionOptions.map((option) => `<button class="button button-secondary user-decision-button" type="button" data-user-kind="${option.kind}" data-user-type="${option.type ?? ""}">${option.label}</button>`).join("");
     const selectableTypes = new Set(pending.options.filter((option) => option.kind === "discard").map((option) => option.type));
-    document.querySelectorAll("#hand-0 .tile").forEach((tileElement) => {
+    document.querySelectorAll("#hand-0 .tile, #new-tile-0 .tile").forEach((tileElement) => {
       const type = Number(tileElement.className.match(/tile-type-(\d+)/)?.[1]);
       if (!selectableTypes.has(type)) {
         return;
@@ -1903,6 +1903,22 @@
     }
   });
   document.querySelector("#hand-0").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    const tile = event.target.closest("[data-user-kind='discard']");
+    if (tile) {
+      event.preventDefault();
+      chooseUserDecision({ kind: "discard", type: Number(tile.dataset.userType) });
+    }
+  });
+  elements.newTile.addEventListener("click", (event) => {
+    const tile = event.target.closest("[data-user-kind='discard']");
+    if (tile) {
+      chooseUserDecision({ kind: "discard", type: Number(tile.dataset.userType) });
+    }
+  });
+  elements.newTile.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") {
       return;
     }
