@@ -1406,7 +1406,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:43 UTC";
+  var BUILD_VERSION = "2026-08-12 05:45 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1592,7 +1592,7 @@
     document.querySelector("#melds-0").innerHTML = renderMelds(seat);
     elements.newTile.innerHTML = displayDrawnTiles.map((tile) => tileMarkup(tile, {
       drawn: true,
-      discarded: discardedTileId === tile.id
+      discarded: discardedTileId === tile.id || pendingRecommendationId === tile.id
     })).join("");
     const improvementTypes = new Set(analysis.improvementTiles.map((item) => item.type));
     const keepableDraws = analyzeKeepableDraws(state, 0).tiles.filter((item) => !improvementTypes.has(item.type));

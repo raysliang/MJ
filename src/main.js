@@ -204,7 +204,7 @@ function renderEastSeat() {
   document.querySelector("#melds-0").innerHTML = renderMelds(seat);
   elements.newTile.innerHTML = displayDrawnTiles.map(tile => tileMarkup(tile, {
     drawn: true,
-    discarded: discardedTileId === tile.id
+    discarded: discardedTileId === tile.id || pendingRecommendationId === tile.id
   })).join("");
   const improvementTypes = new Set(analysis.improvementTiles.map(item => item.type));
   const keepableDraws = analyzeKeepableDraws(state, 0).tiles.filter(item => !improvementTypes.has(item.type));
