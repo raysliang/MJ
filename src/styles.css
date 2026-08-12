@@ -615,6 +615,49 @@ h2 {
   font-size: 2rem;
 }
 
+.tile-user-selectable {
+  cursor: pointer;
+  outline: 2px solid rgba(11, 113, 107, 0.38);
+  outline-offset: 2px;
+  transition: transform 140ms ease, box-shadow 140ms ease, outline-color 140ms ease;
+}
+
+.tile-user-selectable:hover,
+.tile-user-selectable:focus-visible {
+  z-index: 4;
+  outline-color: var(--teal);
+  box-shadow: 0 7px 0 var(--teal), 0 12px 18px rgba(11, 113, 107, 0.2);
+  transform: translateY(-0.22rem);
+}
+
+.user-decision-panel {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+  color: var(--teal-deep);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+.user-decision-panel[hidden] {
+  display: none;
+}
+
+.user-decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.user-decision-button {
+  min-height: 2rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.62rem;
+}
+
 .tile-claimed {
   opacity: 0.42;
   box-shadow: 0 1px 0 #c9bead;

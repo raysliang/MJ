@@ -17,6 +17,7 @@ const decisionStrategy = "efficiency";
 function createInitialState(seed) {
   const initialState = createGame(seed === undefined ? {} : { seed });
   initialState.decisionStrategy = decisionStrategy;
+  initialState.userControl = true;
   return nextTurn(initialState);
 }
 
@@ -41,6 +42,9 @@ const elements = {
   otherCount: document.querySelector("#other-count"),
   sequenceTiles: document.querySelector("#sequence-tiles"),
   otherTiles: document.querySelector("#other-tiles"),
+  userDecisionPanel: document.querySelector("#user-decision-panel"),
+  userDecisionSummary: document.querySelector("#user-decision-summary"),
+  userDecisionActions: document.querySelector("#user-decision-actions"),
   copyPosition: document.querySelector("#copy-position"),
   copyPositionLabel: document.querySelector("#copy-position-label")
 };
@@ -180,6 +184,7 @@ function renderEastSeat() {
     alternative: equivalentDiscardTypes.has(tile.type) && tile.type !== selectedDiscardType,
     decision: discardOptionByType.get(tile.type) ? buildTileDecision(discardOptionByType.get(tile.type), discardOptions, discardedTileId) : null
   })).join("");
+  renderUserDecision();
   document.querySelector("#melds-0").innerHTML = renderMelds(seat);
   elements.newTile.innerHTML = displayDrawnTiles.map(tile => tileMarkup(tile, {
     drawn: true,
@@ -192,6 +197,43 @@ function renderEastSeat() {
   elements.heldCount.textContent = `${keepableCopies} live ${keepableCopies === 1 ? "tile" : "tiles"}`;
   elements.heldTile.innerHTML = needTilesMarkup(keepableDraws, "");
   renderEastAnalysis(analysis);
+}
+
+function chooseUserDecision(choice) {
+  if (!state.pendingUserDecision) {
+    return;
+  }
+  state.userDecisionSelection = choice;
+  state = nextTurn(state);
+  timeline.push(structuredClone(state));
+  render();
+}
+
+function renderUserDecision() {
+  const pending = state.pendingUserDecision;
+  elements.userDecisionPanel.hidden = !pending;
+  if (!pending) {
+    elements.userDecisionActions.innerHTML = "";
+    return;
+  }
+  elements.userDecisionSummary.textContent = pending.phase === "call"
+    ? "Choose how to respond to the discard."
+    : "Choose East's move.";
+  elements.userDecisionActions.innerHTML = pending.options
+    .filter(option => option.kind !== "discard")
+    .map(option => `<button class="button button-secondary user-decision-button" type="button" data-user-kind="${option.kind}" data-user-type="${option.type ?? ""}">${option.label}</button>`)
+    .join("");
+  const selectableTypes = new Set(pending.options.filter(option => option.kind === "discard").map(option => option.type));
+  document.querySelectorAll("#hand-0 .tile").forEach(tileElement => {
+    const type = Number(tileElement.className.match(/tile-type-(\d+)/)?.[1]);
+    if (!selectableTypes.has(type)) {
+      return;
+    }
+    tileElement.classList.add("tile-user-selectable");
+    tileElement.setAttribute("tabindex", "0");
+    tileElement.dataset.userKind = "discard";
+    tileElement.dataset.userType = String(type);
+  });
 }
 
 function analyzedHandForDraws(analysis) {
@@ -316,7 +358,7 @@ function renderBoardStatus() {
     elements.next.disabled = true;
   } else {
     elements.boardTitle.textContent = pendingCallDisplay ? `${displayedPlayer.name} just acted` : `${activePlayer.name} to act`;
-    elements.next.disabled = false;
+    elements.next.disabled = Boolean(state.pendingUserDecision);
   }
   elements.previous.disabled = timeline.length <= 1;
 }
@@ -417,6 +459,9 @@ function render() {
 }
 
 elements.next.addEventListener("click", () => {
+  if (state.pendingUserDecision) {
+    return;
+  }
   state = nextTurn(state);
   timeline.push(structuredClone(state));
   render();
@@ -435,6 +480,35 @@ elements.newDeal.addEventListener("click", () => {
   state = createInitialState(Date.now());
   timeline = [structuredClone(state)];
   render();
+});
+
+elements.userDecisionActions.addEventListener("click", event => {
+  const button = event.target.closest("[data-user-kind]");
+  if (!button) {
+    return;
+  }
+  chooseUserDecision({
+    kind: button.dataset.userKind,
+    ...(button.dataset.userType ? { type: Number(button.dataset.userType) } : {})
+  });
+});
+
+document.querySelector("#hand-0").addEventListener("click", event => {
+  const tile = event.target.closest("[data-user-kind='discard']");
+  if (tile) {
+    chooseUserDecision({ kind: "discard", type: Number(tile.dataset.userType) });
+  }
+});
+
+document.querySelector("#hand-0").addEventListener("keydown", event => {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+  const tile = event.target.closest("[data-user-kind='discard']");
+  if (tile) {
+    event.preventDefault();
+    chooseUserDecision({ kind: "discard", type: Number(tile.dataset.userType) });
+  }
 });
 
 document.addEventListener("keydown", event => {

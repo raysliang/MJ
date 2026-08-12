@@ -57,6 +57,20 @@ test("standard deal gives East fourteen tiles and others thirteen", () => {
   assert.equal(state.replacementWall.length, 14);
 });
 
+test("user-controlled East pauses and applies the selected discard", () => {
+  const state = createGame({ seed: 7 });
+  state.userControl = true;
+  nextTurn(state);
+  assert.equal(state.pendingUserDecision.phase, "turn");
+  const selected = state.pendingUserDecision.options.find(option => option.kind === "discard");
+  assert.ok(selected);
+  state.userDecisionSelection = { kind: "discard", type: selected.type };
+  nextTurn(state);
+  assert.equal(state.pendingUserDecision, null);
+  assert.equal(state.lastAction.kind, "discard");
+  assert.equal(state.lastAction.discardedTile.type, selected.type);
+});
+
 test("standard hands with concealed sequences are complete", () => {
   const winning = hand([
     0, 1, 2,

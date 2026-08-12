@@ -612,6 +612,69 @@ function getKongCandidates(seat) {
   return candidates;
 }
 
+function buildUserTurnDecision(state, seatIndex, pendingCall = null, turn = state.turn + 1) {
+  const seat = state.players[seatIndex];
+  const visibleCounts = getPublicCounts(state, seatIndex);
+  const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, {
+    lookahead: false,
+    strategy: state.decisionStrategy ?? "original"
+  });
+  const options = [];
+  const seenTypes = new Set();
+  for (const tile of sortTiles(seat.concealed)) {
+    if (seenTypes.has(typeOf(tile))) {
+      continue;
+    }
+    seenTypes.add(typeOf(tile));
+    const remaining = seat.concealed.filter(candidate => candidate.id !== tile.id);
+    const analysis = analyzeHand(remaining, seat.melds, visibleCounts);
+    options.push({
+      kind: "discard",
+      type: typeOf(tile),
+      label: `${tileGlyph(tile)} ${tileName(tile)}`,
+      tilesAway: analysis.tilesAway,
+      improvementCopies: analysis.improvementCopies
+    });
+  }
+  for (const candidate of getKongCandidates(seat)) {
+    const branch = evaluateKongCandidate(seat, candidate, visibleCounts);
+    options.push({
+      kind: candidate.kind,
+      type: candidate.type,
+      label: `${candidate.kind === "concealedKong" ? "Concealed kong" : "Added kong"}: ${tileGlyph(candidate.type)} ${tileName(candidate.type)}`,
+      expectedTilesAway: branch.expectedTilesAway,
+      expectedImprovementCopies: branch.expectedImprovementCopies
+    });
+  }
+  if (isWinningHand(seat.concealed, seat.melds)) {
+    options.push({ kind: "selfDraw", label: "Declare self-draw" });
+  }
+  return {
+    phase: "turn",
+    seatIndex,
+    turn,
+    pendingCall,
+    options,
+    discardOptions: bestDiscard?.discardOptions ?? []
+  };
+}
+
+function buildUserCallDecision(state, seatIndex, discardedTile, discardingSeat) {
+  const seat = state.players[seatIndex];
+  const type = typeOf(discardedTile);
+  const counts = tileCounts(seat.concealed);
+  const options = [{ kind: "pass", label: "Pass" }];
+  if (counts[type] >= 2) {
+    options.push({ kind: "pong", type, label: `Pong ${tileGlyph(type)} ${tileName(type)}` });
+  }
+  if (counts[type] >= 3) {
+    options.push({ kind: "exposedKong", type, label: `Kong ${tileGlyph(type)} ${tileName(type)}` });
+  }
+  return options.length > 1
+    ? { phase: "call", seatIndex, discardingSeat, discardedTile, options }
+    : null;
+}
+
 function evaluateKongCandidate(seat, candidate, visibleCounts) {
   let concealedAfter = seat.concealed;
   let meldsAfter = seat.melds;
@@ -669,6 +732,47 @@ export function chooseTurnAction(state, seatIndex = state.activeSeat) {
     const branch = evaluateKongCandidate(seat, candidate, visibleCounts);
     if (compareBranchQuality(branch, bestKong) < 0) {
       bestKong = branch;
+    }
+  }
+
+  const userAction = state.userActionOverrides?.[seatIndex];
+  if (userAction) {
+    delete state.userActionOverrides[seatIndex];
+    if (userAction.kind === "discard") {
+      const tile = seat.concealed.find(candidate => typeOf(candidate) === userAction.type);
+      if (tile) {
+        const remaining = seat.concealed.filter(candidate => candidate.id !== tile.id);
+        return {
+          kind: "discard",
+          type: userAction.type,
+          tile,
+          candidate: {
+            ...bestDiscard,
+            tile,
+            remaining,
+            analysis: analyzeHand(remaining, seat.melds, visibleCounts)
+          },
+          discardOptions: bestDiscard?.discardOptions ?? [],
+          explanation: `${seat.name} follows the user's discard choice.`,
+          beforeAnalysis,
+          visibleCounts
+        };
+      }
+    }
+    const selectedKong = getKongCandidates(seat)
+      .filter(candidate => candidate.kind === userAction.kind && candidate.type === userAction.type)
+      .map(candidate => evaluateKongCandidate(seat, candidate, visibleCounts))[0];
+    if (selectedKong) {
+      const glyph = tileGlyph(selectedKong.type);
+      const kind = selectedKong.kind === "concealedKong" ? "concealed kong" : "added kong";
+      return {
+        kind: selectedKong.kind,
+        type: selectedKong.type,
+        candidate: selectedKong,
+        explanation: `${seat.name} chooses a ${kind} of ${glyph} ${tileName(selectedKong.type)} by user choice.`,
+        beforeAnalysis,
+        visibleCounts
+      };
     }
   }
 
@@ -873,6 +977,67 @@ function drawReplacementTile(state, seat) {
   return tile;
 }
 
+function applyUserCallChoice(state, pending, choice) {
+  const seat = state.players[pending.seatIndex];
+  const discardedTile = pending.discardedTile;
+  if (choice.kind === "pass") {
+    state.pendingUserDecision = null;
+    state.activeSeat = nextSeat(pending.discardingSeat);
+    state.needsDraw = true;
+    state.canDeclareSelfDraw = false;
+    return false;
+  }
+
+  markClaimedDiscard(state, discardedTile, pending.seatIndex);
+  const beforeCall = {
+    concealed: sortTiles(seat.concealed),
+    melds: seat.melds.map(meld => ({ ...meld, tiles: [...meld.tiles] }))
+  };
+  if (choice.kind === "pong") {
+    applyPong(seat, choice.type, discardedTile);
+  } else if (choice.kind === "exposedKong") {
+    applyExposedKong(seat, choice.type, discardedTile);
+  } else {
+    return false;
+  }
+
+  const callInfo = {
+    seatIndex: pending.seatIndex,
+    kind: choice.kind === "exposedKong" ? "exposedKong" : "pong",
+    explanation: `East chooses to call ${choice.kind === "exposedKong" ? "kong" : "pong"} by user choice.`,
+    takenTile: discardedTile,
+    takenTileId: discardedTile.id,
+    beforeCall,
+    drawnTiles: [],
+    drawnTileIds: []
+  };
+  state.activeSeat = pending.seatIndex;
+  state.needsDraw = false;
+  state.canDeclareSelfDraw = false;
+  state.pendingCall = callInfo;
+  state.pendingUserDecision = null;
+  if (state.lastAction) {
+    state.lastAction.call = callInfo;
+  }
+
+  if (choice.kind === "exposedKong") {
+    const replacement = drawReplacementTile(state, seat);
+    if (!replacement) {
+      state.terminal = { type: "wallExhausted", winner: null, message: "The replacement wall is empty after the exposed kong." };
+      return true;
+    }
+    callInfo.drawnTiles = [replacement];
+    callInfo.drawnTileIds = [replacement.id];
+    if (isWinningHand(seat.concealed, seat.melds)) {
+      state.terminal = { type: "selfDraw", winner: pending.seatIndex, message: `${seat.name} wins by drawing the replacement tile after a kong.` };
+      return true;
+    }
+  }
+
+  state.pendingUserDecision = buildUserTurnDecision(state, pending.seatIndex, callInfo, state.turn + 1);
+  return true;
+}
+
 function markClaimedDiscard(state, tile, bySeat) {
   state.claimedDiscardIds.push(tile.id);
   state.lastDiscard = { ...state.lastDiscard, claimedBy: bySeat };
@@ -939,6 +1104,16 @@ function resolveDiscardCalls(state, discardingSeat, discardedTile) {
   const considered = [];
   for (let distance = 1; distance < SEAT_NAMES.length; distance += 1) {
     const seatIndex = (discardingSeat + distance) % SEAT_NAMES.length;
+    if (seatIndex === 0 && state.userControl) {
+      const userCall = buildUserCallDecision(state, seatIndex, discardedTile, discardingSeat);
+      if (userCall) {
+        state.pendingUserDecision = userCall;
+        state.activeSeat = seatIndex;
+        state.needsDraw = false;
+        state.canDeclareSelfDraw = false;
+        return { call: null, considered, pending: true };
+      }
+    }
     const decision = evaluateDiscardCall(state, seatIndex, discardedTile);
     considered.push({ seatIndex, ...decision });
     if (decision.kind === "pass") {
@@ -1105,6 +1280,10 @@ export function createGame({ seed = Date.now() } = {}) {
     lastAction: null,
     claimedDiscardIds: [],
     discardOverrides: {},
+    userControl: false,
+    userActionOverrides: {},
+    pendingUserDecision: null,
+    userDecisionSelection: null,
     history: []
   };
 }
@@ -1114,9 +1293,28 @@ export function nextTurn(state) {
     return state;
   }
 
+  if (state.pendingUserDecision?.phase === "call") {
+    if (!state.userDecisionSelection) {
+      return state;
+    }
+    const pendingCall = state.pendingUserDecision;
+    const selection = state.userDecisionSelection;
+    state.userDecisionSelection = null;
+    const applied = applyUserCallChoice(state, pendingCall, selection);
+    return applied && selection.kind === "pass" ? nextTurn(state) : state;
+  }
+
+  const pendingUserTurn = state.pendingUserDecision?.phase === "turn"
+    ? state.pendingUserDecision
+    : null;
+  if (pendingUserTurn && !state.userDecisionSelection) {
+    return state;
+  }
+
   const seatIndex = state.activeSeat;
   const seat = state.players[seatIndex];
-  const turnNumber = state.turn + 1;
+  const userSelection = pendingUserTurn ? state.userDecisionSelection : null;
+  const turnNumber = pendingUserTurn?.turn ?? state.turn + 1;
   const events = [];
   let discardCallMade = false;
   let drawnTiles = [];
@@ -1125,12 +1323,14 @@ export function nextTurn(state) {
   let callInfo = null;
   let equivalentDiscards = [];
   let discardOptions = [];
-  const pendingCall = state.pendingCall;
+  const pendingCall = pendingUserTurn?.pendingCall ?? state.pendingCall;
+  state.pendingUserDecision = null;
+  state.userDecisionSelection = null;
   const wasDrawRequired = state.needsDraw;
   state.pendingCall = null;
   state.lastDraw = null;
 
-  if (state.needsDraw) {
+  if (!pendingUserTurn && state.needsDraw) {
     const drawn = drawLiveTile(state, seat);
     if (!drawn) {
       state.terminal = { type: "wallExhausted", winner: null, message: "The live wall is empty. No player completed a hand." };
@@ -1161,7 +1361,8 @@ export function nextTurn(state) {
     drawnTiles.push(openingDraw);
   }
 
-  if (state.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds)) {
+  if (state.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds)
+    && (!state.userControl || userSelection?.kind === "selfDraw")) {
     state.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by self-draw.` };
     const explanation = `${seat.name} completes four melds and a pair with the drawn hand. Self-draw is legal; ordinary discard wins are not used.`;
     state.lastAction = {
@@ -1184,6 +1385,21 @@ export function nextTurn(state) {
     state.turn = turnNumber;
     state.history.push(state.lastAction);
     return state;
+  }
+
+  if (!pendingUserTurn && state.userControl && seatIndex === 0) {
+    if (isWinningHand(seat.concealed, seat.melds)) {
+      state.turn = turnNumber;
+      state.pendingUserDecision = buildUserTurnDecision(state, seatIndex, pendingCall, turnNumber);
+      return state;
+    }
+    state.turn = turnNumber;
+    state.pendingUserDecision = buildUserTurnDecision(state, seatIndex, pendingCall, turnNumber);
+    return state;
+  }
+
+  if (userSelection && userSelection.kind !== "selfDraw") {
+    state.userActionOverrides[seatIndex] = userSelection;
   }
 
   const decision = chooseTurnAction(state, seatIndex);
