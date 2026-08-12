@@ -17,7 +17,7 @@ const shantenCache = new Map();
 export const TILE_TYPES = Object.freeze([
   ...Array.from({ length: 27 }, (_, type) => Object.freeze({
     type,
-    code: `${(type % 9) + 1}${"mps"[Math.floor(type / 9)]}`,
+    code: `${(type % 9) + 1}${"msp"[Math.floor(type / 9)]}`,
     name: `${RANK_NAMES[type % 9]}${SUIT_NAMES[Math.floor(type / 9) === 0 ? 0 : Math.floor(type / 9) === 1 ? 1 : 2] === "Characters" ? "萬" : Math.floor(type / 9) === 1 ? "索" : "筒"}`,
     englishName: `${(type % 9) + 1} ${SUIT_NAMES[Math.floor(type / 9)]}`,
     glyph: GLYPHS[type],
@@ -343,18 +343,24 @@ function compareRolloutQuality(left, right) {
   return 0;
 }
 
-function compareDiscardCandidates(left, right) {
+function compareDiscardCandidates(left, right, strategy = "original") {
   if (!right) {
     return -1;
   }
   if (left.analysis.tilesAway !== right.analysis.tilesAway) {
     return left.analysis.tilesAway < right.analysis.tilesAway ? -1 : 1;
   }
-  const rolloutQuality = compareRolloutQuality(left, right);
-  if (rolloutQuality !== 0) {
-    return rolloutQuality;
+  if (strategy === "structure") {
+    if (left.structureScore !== right.structureScore) {
+      return left.structureScore > right.structureScore ? -1 : 1;
+    }
+  } else if (strategy !== "efficiency") {
+    const rolloutQuality = compareRolloutQuality(left, right);
+    if (rolloutQuality !== 0) {
+      return rolloutQuality;
+    }
   }
-  if (left.structureScore !== right.structureScore) {
+  if (strategy !== "structure" && left.structureScore !== right.structureScore) {
     return left.structureScore > right.structureScore ? -1 : 1;
   }
   if (left.analysis.improvementCopies !== right.analysis.improvementCopies) {
@@ -369,11 +375,11 @@ function compareDiscardCandidates(left, right) {
   return typeOf(left.tile) - typeOf(right.tile);
 }
 
-function samePrimaryDiscardQuality(left, right) {
+function samePrimaryDiscardQuality(left, right, strategy = "original") {
   return left.analysis.tilesAway === right.analysis.tilesAway
-    && compareRolloutQuality(left, right) === 0
+    && (strategy === "efficiency" || compareRolloutQuality(left, right) === 0)
     && left.weakness === right.weakness
-    && left.structureScore === right.structureScore
+    && (strategy !== "structure" || left.structureScore === right.structureScore)
     && left.analysis.improvementCopies === right.analysis.improvementCopies
     && left.analysis.improvementTiles.length === right.analysis.improvementTiles.length
     ;
@@ -394,7 +400,7 @@ function summarizeDiscardCandidate(candidate, equivalent) {
   };
 }
 
-function evaluateDiscardRollout(candidate, melds, visibleCounts) {
+function evaluateDiscardRollout(candidate, melds, visibleCounts, strategy = "original") {
   let totalCopies = 0;
   let weightedTilesAway = 0;
   let weightedImprovementCopies = 0;
@@ -419,7 +425,7 @@ function evaluateDiscardRollout(candidate, melds, visibleCounts) {
     const nextAnalysis = analyzeHand(drawnHand, melds, visibleAfterDraw);
     const nextDiscard = nextAnalysis.complete
       ? null
-      : chooseBestDiscard(drawnHand, melds, visibleAfterDraw, { lookahead: false });
+      : chooseBestDiscard(drawnHand, melds, visibleAfterDraw, { lookahead: false, strategy });
     const resultingAnalysis = nextDiscard?.analysis ?? nextAnalysis;
     weightedTilesAway += resultingAnalysis.tilesAway * remaining;
     weightedImprovementCopies += resultingAnalysis.improvementCopies * remaining;
@@ -443,7 +449,7 @@ function evaluateDiscardRollout(candidate, melds, visibleCounts) {
   };
 }
 
-export function chooseBestDiscard(concealedTiles, melds = [], visibleCounts, { lookahead = true } = {}) {
+export function chooseBestDiscard(concealedTiles, melds = [], visibleCounts, { lookahead = true, strategy = "original" } = {}) {
   const original = [...concealedTiles];
   const originalCounts = tileCounts(original);
   let best = null;
@@ -467,7 +473,7 @@ export function chooseBestDiscard(concealedTiles, melds = [], visibleCounts, { l
       structure: structureLabel(type, originalCounts)
     };
     candidates.push(candidate);
-    if (compareDiscardCandidates(candidate, best) < 0) {
+    if (compareDiscardCandidates(candidate, best, strategy) < 0) {
       best = candidate;
     }
   }
@@ -477,13 +483,13 @@ export function chooseBestDiscard(concealedTiles, melds = [], visibleCounts, { l
   const minimumTilesAway = Math.min(...candidates.map(candidate => candidate.analysis.tilesAway));
   if (lookahead) {
     for (const candidate of candidates) {
-      if (candidate.analysis.tilesAway === minimumTilesAway) {
-        candidate.rollout = evaluateDiscardRollout(candidate, melds, visibleCounts);
+      if (candidate.analysis.tilesAway === minimumTilesAway && strategy !== "efficiency") {
+        candidate.rollout = evaluateDiscardRollout(candidate, melds, visibleCounts, strategy);
       }
     }
-    best = candidates.reduce((current, candidate) => compareDiscardCandidates(candidate, current) < 0 ? candidate : current, null);
+    best = candidates.reduce((current, candidate) => compareDiscardCandidates(candidate, current, strategy) < 0 ? candidate : current, null);
   }
-  const optimalDiscards = candidates.filter(candidate => samePrimaryDiscardQuality(candidate, best));
+  const optimalDiscards = candidates.filter(candidate => samePrimaryDiscardQuality(candidate, best, strategy));
   const optimalTypes = new Set(optimalDiscards.map(candidate => typeOf(candidate.tile)));
   return {
     ...best,
@@ -648,8 +654,10 @@ export function chooseTurnAction(state, seatIndex = state.activeSeat) {
   const seat = state.players[seatIndex];
   const visibleCounts = getPublicCounts(state, seatIndex);
   const beforeAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
+  const strategy = state.decisionStrategy ?? "original";
   const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, {
-    lookahead: true
+    lookahead: strategy !== "efficiency",
+    strategy
   });
   let bestKong = null;
 
@@ -698,10 +706,10 @@ export function chooseTurnAction(state, seatIndex = state.activeSeat) {
   };
 }
 
-function evaluatePongBranch(seat, type, visibleCounts, { lookahead = true } = {}) {
+function evaluatePongBranch(seat, type, visibleCounts, { lookahead = true, strategy = "original" } = {}) {
   const removed = removeTilesOfType(seat.concealed, type, 2);
   const meldsAfter = [...seat.melds, { kind: "pong", type, open: true, source: "discard", tiles: [] }];
-  const bestDiscard = chooseBestDiscard(removed.kept, meldsAfter, visibleCounts, { lookahead });
+  const bestDiscard = chooseBestDiscard(removed.kept, meldsAfter, visibleCounts, { lookahead, strategy });
   if (!bestDiscard) {
     return null;
   }
@@ -749,14 +757,15 @@ export function evaluateDiscardCall(state, seatIndex, discardedTile) {
   const seat = state.players[seatIndex];
   const type = typeOf(discardedTile);
   const visibleCounts = getPublicCounts(state, seatIndex);
-  const lookahead = true;
+  const strategy = state.decisionStrategy ?? "original";
+  const lookahead = strategy !== "efficiency";
   const currentAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
-  const currentDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, { lookahead });
+  const currentDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, { lookahead, strategy });
   const counts = tileCounts(seat.concealed);
   const options = [];
 
   if (counts[type] >= 2) {
-    const pong = evaluatePongBranch(seat, type, visibleCounts, { lookahead });
+    const pong = evaluatePongBranch(seat, type, visibleCounts, { lookahead, strategy });
     if (pong) {
       options.push(pong);
     }
@@ -1024,7 +1033,7 @@ export function analyzePlayer(state, seatIndex) {
   if (current.complete || !isActiveDiscardPhase) {
     return current;
   }
-  const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts);
+  const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, { strategy: state.decisionStrategy ?? "original" });
   return bestDiscard ? bestDiscard.analysis : current;
 }
 

@@ -6,4 +6,4 @@ The root app is the only supported build and is optimized for mobile-sized viewp
 - Source: `src/main.js`, `src/mahjong.js`, and `src/styles.css`
 - Generated bundle: `dist/mj.js`
 - Published app: `https://raysliang.github.io/MJ/`
-- Build timestamp: `2026-08-11 17:46`
+- Build timestamp: generated automatically in UTC by `npm run build`

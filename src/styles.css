@@ -87,6 +87,28 @@ button,
   padding: 2.4rem 1.5rem 1.5rem;
 }
 
+.strategy-picker {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  min-width: 8rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  text-transform: uppercase;
+}
+
+.strategy-picker select {
+  min-height: 2.2rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.3rem;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  text-transform: none;
+}
+
 .build-footer {
   margin-top: 1.25rem;
   padding-top: 0.7rem;
@@ -110,7 +132,7 @@ button,
 .topbar {
   position: relative;
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto auto auto minmax(0, 1fr);
   align-items: start;
   gap: 2rem;
   padding: 0 0 1.7rem;
@@ -977,6 +999,17 @@ h2 {
   background: rgba(2, 52, 51, 0.28);
 }
 
+.river-public-meld {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0.12rem;
+  padding: 0.2rem 0.25rem 0.1rem;
+  border-left: 2px solid var(--marigold);
+  border-radius: 0.2rem;
+  background: rgba(238, 180, 70, 0.12);
+  opacity: 0.52;
+}
+
 .river-empty {
   align-self: center;
   padding: 2rem 1rem;
@@ -1300,6 +1333,11 @@ h2 {
     backdrop-filter: blur(8px);
   }
 
+  .strategy-picker {
+    flex: 0 1 9rem;
+    min-width: 0;
+  }
+
   .control-cluster {
     justify-self: end;
     flex: 0 0 auto;
@@ -1346,6 +1384,19 @@ h2 {
 
   .button-label {
     display: none;
+  }
+
+  .strategy-picker > span {
+    display: none;
+  }
+
+  .strategy-picker select {
+    min-height: 2.2rem;
+    width: 100%;
+    overflow: hidden;
+    font-size: 0.52rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .button span[aria-hidden="true"] {

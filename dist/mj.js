@@ -48,7 +48,7 @@
   var TILE_TYPES = Object.freeze([
     ...Array.from({ length: 27 }, (_, type) => Object.freeze({
       type,
-      code: `${type % 9 + 1}${"mps"[Math.floor(type / 9)]}`,
+      code: `${type % 9 + 1}${"msp"[Math.floor(type / 9)]}`,
       name: `${RANK_NAMES[type % 9]}${SUIT_NAMES[Math.floor(type / 9) === 0 ? 0 : Math.floor(type / 9) === 1 ? 1 : 2] === "Characters" ? "\u842C" : Math.floor(type / 9) === 1 ? "\u7D22" : "\u7B52"}`,
       englishName: `${type % 9 + 1} ${SUIT_NAMES[Math.floor(type / 9)]}`,
       glyph: GLYPHS[type],
@@ -337,18 +337,24 @@
     }
     return 0;
   }
-  function compareDiscardCandidates(left, right) {
+  function compareDiscardCandidates(left, right, strategy = "original") {
     if (!right) {
       return -1;
     }
     if (left.analysis.tilesAway !== right.analysis.tilesAway) {
       return left.analysis.tilesAway < right.analysis.tilesAway ? -1 : 1;
     }
-    const rolloutQuality = compareRolloutQuality(left, right);
-    if (rolloutQuality !== 0) {
-      return rolloutQuality;
+    if (strategy === "structure") {
+      if (left.structureScore !== right.structureScore) {
+        return left.structureScore > right.structureScore ? -1 : 1;
+      }
+    } else if (strategy !== "efficiency") {
+      const rolloutQuality = compareRolloutQuality(left, right);
+      if (rolloutQuality !== 0) {
+        return rolloutQuality;
+      }
     }
-    if (left.structureScore !== right.structureScore) {
+    if (strategy !== "structure" && left.structureScore !== right.structureScore) {
       return left.structureScore > right.structureScore ? -1 : 1;
     }
     if (left.analysis.improvementCopies !== right.analysis.improvementCopies) {
@@ -362,8 +368,8 @@
     }
     return typeOf(left.tile) - typeOf(right.tile);
   }
-  function samePrimaryDiscardQuality(left, right) {
-    return left.analysis.tilesAway === right.analysis.tilesAway && compareRolloutQuality(left, right) === 0 && left.weakness === right.weakness && left.structureScore === right.structureScore && left.analysis.improvementCopies === right.analysis.improvementCopies && left.analysis.improvementTiles.length === right.analysis.improvementTiles.length;
+  function samePrimaryDiscardQuality(left, right, strategy = "original") {
+    return left.analysis.tilesAway === right.analysis.tilesAway && (strategy === "efficiency" || compareRolloutQuality(left, right) === 0) && left.weakness === right.weakness && (strategy !== "structure" || left.structureScore === right.structureScore) && left.analysis.improvementCopies === right.analysis.improvementCopies && left.analysis.improvementTiles.length === right.analysis.improvementTiles.length;
   }
   function summarizeDiscardCandidate(candidate, equivalent) {
     return {
@@ -379,7 +385,7 @@
       equivalent
     };
   }
-  function evaluateDiscardRollout(candidate, melds, visibleCounts) {
+  function evaluateDiscardRollout(candidate, melds, visibleCounts, strategy = "original") {
     let totalCopies = 0;
     let weightedTilesAway = 0;
     let weightedImprovementCopies = 0;
@@ -401,7 +407,7 @@
       visibleAfterDraw[type] = (visibleAfterDraw[type] ?? 0) + 1;
       const drawnHand = [...candidate.remaining, { id: -1, type }];
       const nextAnalysis = analyzeHand(drawnHand, melds, visibleAfterDraw);
-      const nextDiscard = nextAnalysis.complete ? null : chooseBestDiscard(drawnHand, melds, visibleAfterDraw, { lookahead: false });
+      const nextDiscard = nextAnalysis.complete ? null : chooseBestDiscard(drawnHand, melds, visibleAfterDraw, { lookahead: false, strategy });
       const resultingAnalysis = nextDiscard?.analysis ?? nextAnalysis;
       weightedTilesAway += resultingAnalysis.tilesAway * remaining;
       weightedImprovementCopies += resultingAnalysis.improvementCopies * remaining;
@@ -422,7 +428,7 @@
       totalCopies
     };
   }
-  function chooseBestDiscard(concealedTiles, melds = [], visibleCounts, { lookahead = true } = {}) {
+  function chooseBestDiscard(concealedTiles, melds = [], visibleCounts, { lookahead = true, strategy = "original" } = {}) {
     const original = [...concealedTiles];
     const originalCounts = tileCounts(original);
     let best = null;
@@ -445,7 +451,7 @@
         structure: structureLabel(type, originalCounts)
       };
       candidates.push(candidate);
-      if (compareDiscardCandidates(candidate, best) < 0) {
+      if (compareDiscardCandidates(candidate, best, strategy) < 0) {
         best = candidate;
       }
     }
@@ -455,13 +461,13 @@
     const minimumTilesAway = Math.min(...candidates.map((candidate) => candidate.analysis.tilesAway));
     if (lookahead) {
       for (const candidate of candidates) {
-        if (candidate.analysis.tilesAway === minimumTilesAway) {
-          candidate.rollout = evaluateDiscardRollout(candidate, melds, visibleCounts);
+        if (candidate.analysis.tilesAway === minimumTilesAway && strategy !== "efficiency") {
+          candidate.rollout = evaluateDiscardRollout(candidate, melds, visibleCounts, strategy);
         }
       }
-      best = candidates.reduce((current, candidate) => compareDiscardCandidates(candidate, current) < 0 ? candidate : current, null);
+      best = candidates.reduce((current, candidate) => compareDiscardCandidates(candidate, current, strategy) < 0 ? candidate : current, null);
     }
-    const optimalDiscards = candidates.filter((candidate) => samePrimaryDiscardQuality(candidate, best));
+    const optimalDiscards = candidates.filter((candidate) => samePrimaryDiscardQuality(candidate, best, strategy));
     const optimalTypes = new Set(optimalDiscards.map((candidate) => typeOf(candidate.tile)));
     return {
       ...best,
@@ -603,8 +609,10 @@
     const seat = state2.players[seatIndex];
     const visibleCounts = getPublicCounts(state2, seatIndex);
     const beforeAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
+    const strategy = state2.decisionStrategy ?? "original";
     const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, {
-      lookahead: true
+      lookahead: strategy !== "efficiency",
+      strategy
     });
     let bestKong = null;
     for (const candidate of getKongCandidates(seat)) {
@@ -645,10 +653,10 @@
       visibleCounts
     };
   }
-  function evaluatePongBranch(seat, type, visibleCounts, { lookahead = true } = {}) {
+  function evaluatePongBranch(seat, type, visibleCounts, { lookahead = true, strategy = "original" } = {}) {
     const removed = removeTilesOfType(seat.concealed, type, 2);
     const meldsAfter = [...seat.melds, { kind: "pong", type, open: true, source: "discard", tiles: [] }];
-    const bestDiscard = chooseBestDiscard(removed.kept, meldsAfter, visibleCounts, { lookahead });
+    const bestDiscard = chooseBestDiscard(removed.kept, meldsAfter, visibleCounts, { lookahead, strategy });
     if (!bestDiscard) {
       return null;
     }
@@ -689,13 +697,14 @@
     const seat = state2.players[seatIndex];
     const type = typeOf(discardedTile);
     const visibleCounts = getPublicCounts(state2, seatIndex);
-    const lookahead = true;
+    const strategy = state2.decisionStrategy ?? "original";
+    const lookahead = strategy !== "efficiency";
     const currentAnalysis = analyzeHand(seat.concealed, seat.melds, visibleCounts);
-    const currentDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, { lookahead });
+    const currentDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, { lookahead, strategy });
     const counts = tileCounts(seat.concealed);
     const options = [];
     if (counts[type] >= 2) {
-      const pong = evaluatePongBranch(seat, type, visibleCounts, { lookahead });
+      const pong = evaluatePongBranch(seat, type, visibleCounts, { lookahead, strategy });
       if (pong) {
         options.push(pong);
       }
@@ -934,7 +943,7 @@
     if (current.complete || !isActiveDiscardPhase) {
       return current;
     }
-    const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts);
+    const bestDiscard = chooseBestDiscard(seat.concealed, seat.melds, visibleCounts, { strategy: state2.decisionStrategy ?? "original" });
     return bestDiscard ? bestDiscard.analysis : current;
   }
   function createGame({ seed = Date.now() } = {}) {
@@ -1153,8 +1162,11 @@
   }
 
   // src/main.js
+  var BUILD_VERSION = "2026-08-12 01:45 UTC";
+  var decisionStrategy = "original";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
+    initialState.decisionStrategy = decisionStrategy;
     return nextTurn(initialState);
   }
   var state = createInitialState();
@@ -1178,8 +1190,10 @@
     sequenceTiles: document.querySelector("#sequence-tiles"),
     otherTiles: document.querySelector("#other-tiles"),
     copyPosition: document.querySelector("#copy-position"),
-    copyPositionLabel: document.querySelector("#copy-position-label")
+    copyPositionLabel: document.querySelector("#copy-position-label"),
+    strategySelect: document.querySelector("#strategy-select")
   };
+  document.querySelector("#build-version").textContent = `Build ${BUILD_VERSION}`;
   var DOT_POSITIONS = {
     1: [5],
     2: [2, 8],
@@ -1211,24 +1225,15 @@
     6: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/0107%E4%B8%83%E8%90%AC.svg/120px-0107%E4%B8%83%E8%90%AC.svg.png",
     7: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/0108%E5%85%AB%E8%90%AC.svg/120px-0108%E5%85%AB%E8%90%AC.svg.png",
     8: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/0109%E4%B9%9D%E8%90%AC.svg/120px-0109%E4%B9%9D%E8%90%AC.svg.png",
-    9: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/0201%E4%B8%80%E9%A4%85.svg/120px-0201%E4%B8%80%E9%A4%85.svg.png",
-    10: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/0202%E4%BA%8C%E9%A4%85.svg/120px-0202%E4%BA%8C%E9%A4%85.svg.png",
-    11: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/0203%E4%B8%89%E9%A4%85.svg/120px-0203%E4%B8%89%E9%A4%85.svg.png",
-    12: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/0204%E5%9B%9B%E9%A4%85.svg/120px-0204%E5%9B%9B%E9%A4%85.svg.png",
-    13: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/0205%E4%BA%94%E9%A4%85.svg/120px-0205%E4%BA%94%E9%A4%85.svg.png",
-    14: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/0206%E5%85%AD%E9%A4%85.svg/120px-0206%E5%85%AD%E9%A4%85.svg.png",
-    15: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/0207%E4%B8%83%E9%A4%85.svg/120px-0207%E4%B8%83%E9%A4%85.svg.png",
-    16: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/0208%E5%85%AB%E9%A4%85.svg/120px-0208%E5%85%AB%E9%A4%85.svg.png",
-    17: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/0209%E4%B9%9D%E9%A4%85.svg/120px-0209%E4%B9%9D%E9%A4%85.svg.png",
-    18: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/0301%E4%B8%80%E6%A2%9D.svg/120px-0301%E4%B8%80%E6%A2%9D.svg.png",
-    19: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/0302%E4%BA%8C%E6%A2%9D.svg/120px-0302%E4%BA%8C%E6%A2%9D.svg.png",
-    20: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/0303%E4%B8%89%E6%A2%9D.svg/120px-0303%E4%B8%89%E6%A2%9D.svg.png",
-    21: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/0304%E5%9B%9B%E6%A2%9D.svg/120px-0304%E5%9B%9B%E6%A2%9D.svg.png",
-    22: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/0305%E4%BA%94%E6%A2%9D.svg/120px-0305%E4%BA%94%E6%A2%9D.svg.png",
-    23: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/0306%E5%85%AD%E6%A2%9D.svg/120px-0306%E5%85%AD%E6%A2%9D.svg.png",
-    24: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/0307%E4%B8%83%E6%A2%9D.svg/120px-0307%E4%B8%83%E6%A2%9D.svg.png",
-    25: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/0308%E5%85%AB%E6%A2%9D.svg/120px-0308%E5%85%AB%E6%A2%9D.svg.png",
-    26: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/0309%E4%B9%9D%E6%A2%9D.svg/120px-0309%E4%B9%9D%E6%A2%9D.svg.png",
+    9: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/0301%E4%B8%80%E6%A2%9D.svg/120px-0301%E4%B8%80%E6%A2%9D.svg.png",
+    10: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/0302%E4%BA%8C%E6%A2%9D.svg/120px-0302%E4%BA%8C%E6%A2%9D.svg.png",
+    11: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/0303%E4%B8%89%E6%A2%9D.svg/120px-0303%E4%B8%89%E6%A2%9D.svg.png",
+    12: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/0304%E5%9B%9B%E6%A2%9D.svg/120px-0304%E5%9B%9B%E6%A2%9D.svg.png",
+    13: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/0305%E4%BA%94%E6%A2%9D.svg/120px-0305%E4%BA%94%E6%A2%9D.svg.png",
+    14: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/0306%E5%85%AD%E6%A2%9D.svg/120px-0306%E5%85%AD%E6%A2%9D.svg.png",
+    15: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/0307%E4%B8%83%E6%A2%9D.svg/120px-0307%E4%B8%83%E6%A2%9D.svg.png",
+    16: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/0308%E5%85%AB%E6%A2%9D.svg/120px-0308%E5%85%AB%E6%A2%9D.svg.png",
+    17: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/0309%E4%B9%9D%E6%A2%9D.svg/120px-0309%E4%B9%9D%E6%A2%9D.svg.png",
     27: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/0401%E6%9D%B1%E9%A2%A8.svg/120px-0401%E6%9D%B1%E9%A2%A8.svg.png",
     28: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/0403%E5%8D%97%E9%A2%A8.svg/120px-0403%E5%8D%97%E9%A2%A8.svg.png",
     29: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/0402%E8%A5%BF%E9%A2%A8.svg/120px-0402%E8%A5%BF%E9%A2%A8.svg.png",
@@ -1248,15 +1253,6 @@
       "0107\u4E03\u842C.svg.webp",
       "0108\u516B\u842C.svg.webp",
       "0109\u4E5D\u842C.svg.webp",
-      "0201\u4E00\u9905.svg.webp",
-      "0202\u4E8C\u9905.svg.webp",
-      "0203\u4E09\u9905.svg.webp",
-      "0204\u56DB\u9905.svg.webp",
-      "0205\u4E94\u9905.svg.webp",
-      "0206\u516D\u9905.svg.webp",
-      "0207\u4E03\u9905.svg.webp",
-      "0208\u516B\u9905.svg.webp",
-      "0209\u4E5D\u9905.svg.webp",
       "0301\u4E00\u689D.svg.webp",
       "0302\u4E8C\u689D.svg.webp",
       "0303\u4E09\u689D.svg.webp",
@@ -1266,6 +1262,15 @@
       "0307\u4E03\u689D.svg.webp",
       "0308\u516B\u689D.svg.webp",
       "0309\u4E5D\u689D.svg.webp",
+      "0201\u4E00\u9905.svg.webp",
+      "0202\u4E8C\u9905.svg.webp",
+      "0203\u4E09\u9905.svg.webp",
+      "0204\u56DB\u9905.svg.webp",
+      "0205\u4E94\u9905.svg.webp",
+      "0206\u516D\u9905.svg.webp",
+      "0207\u4E03\u9905.svg.webp",
+      "0208\u516B\u9905.svg.webp",
+      "0209\u4E5D\u9905.svg.webp",
       null,
       null,
       "0403\u5357\u98A8.svg.webp",
@@ -1380,12 +1385,12 @@
   function analyzedHandForDraws(analysis) {
     const seat = state.players[0];
     if (state.activeSeat === 0 && !state.needsDraw && !state.terminal) {
-      return chooseBestDiscard(seat.concealed, seat.melds, analysis.visibleCounts)?.remaining ?? seat.concealed;
+      return chooseBestDiscard(seat.concealed, seat.melds, analysis.visibleCounts, { strategy: state.decisionStrategy })?.remaining ?? seat.concealed;
     }
     return seat.concealed;
   }
   function discardTilesForDraw(item, hand, melds, visibleCounts) {
-    const decision = chooseBestDiscard([...hand, { id: -1, type: item.type }], melds, visibleCounts, { lookahead: false });
+    const decision = chooseBestDiscard([...hand, { id: -1, type: item.type }], melds, visibleCounts, { lookahead: false, strategy: state.decisionStrategy });
     if (!decision) {
       return [];
     }
@@ -1460,16 +1465,22 @@
   }
   function renderPublicRiver() {
     const hasDiscards = state.players.some((player) => player.discards.length > 0);
-    if (!hasDiscards) {
+    const publicMelds = state.players.slice(1).flatMap((player) => player.melds.map((meld) => ({ player, meld })));
+    if (!hasDiscards && publicMelds.length === 0) {
       elements.riverGrid.innerHTML = '<div class="river-empty">No tiles have entered the river yet.</div>';
       return;
     }
     const action = state.lastAction;
+    const publicMeldTileIds = new Set(publicMelds.flatMap(({ meld }) => meld.tiles.map((tile) => tile.id)));
     const historyDiscards = state.history.map((entry) => entry.discardedTile).filter(Boolean);
     const historyIds = new Set(historyDiscards.map((tile) => tile.id));
     const unrecordedDiscards = state.players.flatMap((player) => player.discards).filter((tile) => !historyIds.has(tile.id));
-    const discardedTiles = [...historyDiscards, ...unrecordedDiscards];
-    elements.riverGrid.innerHTML = `<div class="river-lane-tiles">${discardedTiles.map((tile) => tileMarkup(tile, { compact: true, claimed: state.claimedDiscardIds.includes(tile.id), drawn: action?.drawnTileIds?.includes(tile.id), discarded: action?.discardedTileId === tile.id })).join("") || '<span class="empty-inline">none</span>'}</div>`;
+    const discardedTiles = [...historyDiscards, ...unrecordedDiscards].filter((tile) => !publicMeldTileIds.has(tile.id));
+    const meldMarkup = publicMelds.map(({ player, meld }) => {
+      const label = meld.kind === "kong" ? "Kong" : "Pong";
+      return `<span class="river-public-meld" title="${label} \xB7 ${player.name}">${meld.tiles.map((tile) => tileMarkup(tile, { compact: true })).join("")}</span>`;
+    }).join("");
+    elements.riverGrid.innerHTML = `<div class="river-lane-tiles">${meldMarkup}${discardedTiles.map((tile) => tileMarkup(tile, { compact: true, claimed: state.claimedDiscardIds.includes(tile.id), drawn: action?.drawnTileIds?.includes(tile.id), discarded: action?.discardedTileId === tile.id })).join("") || '<span class="empty-inline">none</span>'}</div>`;
   }
   function renderBoardStatus() {
     const activePlayer = state.players[state.activeSeat];
@@ -1499,6 +1510,14 @@
     }
     return melds.map((meld) => `${meld.kind} [${formatTileCodes(meld.tiles)}]`).join("; ");
   }
+  function strategyLabel(strategy) {
+    return {
+      original: "Balanced",
+      efficiency: "Immediate efficiency",
+      future: "Future rollout",
+      structure: "Structure first"
+    }[strategy] ?? "Balanced";
+  }
   function describeTile(tile) {
     return `${tileCode(tile)} (${tileEnglishName(tile)})`;
   }
@@ -1525,22 +1544,24 @@
       "- Wins are by self-draw, except for robbing an added kong; ordinary discard wins are not used.",
       "- Decisions use only the acting hand and public tiles; opponent concealed hands are hidden.",
       "- No scores are tracked.",
-      "- Tile notation: m = characters, p = dots, s = bamboo; honors use east, south, west, north, red, green, white."
+      "- Tile notation: m = characters, p = dots, s = bamboo; honors use east, south, west, north, red, green, white.",
+      "- The reviewed discard may appear both in the pre-discard hand and East's discard row; it is the same physical tile and must be counted once."
     ];
     const moveLines = action ? [
       "Move under review:",
       `  Actor: ${reviewSeat.name}`,
-      `  Draw: ${formatTileCodes(action.drawnTiles)}`,
-      `  Throw: ${action.discardedTile ? describeTile(action.discardedTile) : `none (${action.kind})`}`,
+      `  Draw this move: ${formatTileCodes(action.drawnTiles)}`,
+      `  Discard this move: ${action.discardedTile ? describeTile(action.discardedTile) : `none (${action.kind})`}`,
       `  Description: ${action.discardedTile ? `${reviewSeat.name} throws ${describeTile(action.discardedTile)}.` : `${reviewSeat.name} makes a ${action.kind} action.`}`,
       ...action.call ? [`  Response: ${state.players[action.call.seatIndex].name} calls ${action.call.kind} on ${describeTile(action.call.takenTile)}.`] : [],
       ...action.callFromPrevious ? [`  Prior call: ${state.players[action.callFromPrevious.seatIndex].name} called ${action.callFromPrevious.kind} on ${describeTile(action.callFromPrevious.takenTile)}.`] : [],
-      `  Simulation note: ${action.explanation}`
+      `  Simulation note: ${action.explanation}`,
+      `  Decision profile: ${strategyLabel(state.decisionStrategy)}`
     ] : [
       "Move under review:",
       "  Actor: East",
-      "  Draw: none recorded at this position.",
-      "  Throw: no East move recorded at this position.",
+      "  Draw this move: none recorded at this position.",
+      "  Discard this move: no East move recorded at this position.",
       "  Description: East's concealed hand is the only private hand included."
     ];
     return [
@@ -1551,15 +1572,16 @@
       `Live wall: ${state.liveWall.length}`,
       `Replacement tiles: ${state.replacementWall.length}`,
       "",
-      "Current public board (discards):",
+      action ? "Current public board (after the reviewed move):" : "Current public board (discards):",
       ...boardLines,
       "",
       "Current public melds:",
       ...meldLines,
       "",
       "East hand used for analysis:",
-      `  Concealed: ${formatTileCodes(promptHand)}`,
+      `  Hand before this discard: ${formatTileCodes(promptHand)}`,
       `  Open melds: ${formatMelds(reviewSeat.melds)}`,
+      "  The hand line is before the discard; the discard line identifies the tile removed from it.",
       "",
       ...moveLines,
       "",
@@ -1585,6 +1607,12 @@
     render();
   });
   elements.newDeal.addEventListener("click", () => {
+    state = createInitialState(Date.now());
+    timeline = [structuredClone(state)];
+    render();
+  });
+  elements.strategySelect.addEventListener("change", (event) => {
+    decisionStrategy = event.target.value;
     state = createInitialState(Date.now());
     timeline = [structuredClone(state)];
     render();

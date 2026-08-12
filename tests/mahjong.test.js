@@ -12,6 +12,7 @@ import {
   getPublicCounts,
   isWinningHand,
   nextTurn,
+  tileCode,
   tileCounts
 } from "../src/mahjong.js";
 
@@ -40,6 +41,13 @@ test("the deck has four copies of 34 non-flower tile types", () => {
   assert.deepEqual(tileCounts(deck), Array(34).fill(4));
   assert.equal(TILE_TYPES.length, 34);
   assert.equal(TILE_TYPES.some(item => item.name.includes("花")), false);
+});
+
+test("tile notation matches the visible suit artwork", () => {
+  assert.equal(tileCode(9), "1s");
+  assert.equal(tileCode(17), "9s");
+  assert.equal(tileCode(18), "1p");
+  assert.equal(tileCode(26), "9p");
 });
 
 test("standard deal gives East fourteen tiles and others thirteen", () => {
