@@ -158,6 +158,9 @@ function renderEastSeat() {
   const displayDrawnTiles = handTiles.filter(tile => newTileIds.includes(tile.id));
   const discardedTileId = showingPreDiscardHand ? lastAction.discardedTileId : null;
   const discardOptions = showingPreDiscardHand ? lastAction?.discardOptions ?? [] : [];
+  const pendingRecommendationId = state.pendingUserDecision?.phase === "turn"
+    ? state.pendingUserDecision.recommendedId
+    : null;
   const discardOptionByType = new Map(discardOptions.map(option => [option.type, option]));
   const selectedDiscardType = lastAction?.discardedTile?.type ?? null;
   const equivalentDiscardTypes = new Set((lastAction?.equivalentDiscards ?? []).map(tile => tile.type));
@@ -179,7 +182,7 @@ function renderEastSeat() {
   compactHandLayout.classList.toggle("has-melds", seat.melds.length > 0);
   document.querySelector("#hand-0").innerHTML = displayHandTiles.map(tile => tileMarkup(tile, {
     drawn: drawnTileIds.includes(tile.id),
-    discarded: discardedTileId === tile.id,
+    discarded: discardedTileId === tile.id || pendingRecommendationId === tile.id,
     alternative: equivalentDiscardTypes.has(tile.type) && tile.type !== selectedDiscardType,
     decision: discardOptionByType.get(tile.type) ? buildTileDecision(discardOptionByType.get(tile.type), discardOptions, discardedTileId) : null
   })).join("");
@@ -357,7 +360,7 @@ function renderBoardStatus() {
     elements.next.disabled = true;
   } else {
     elements.boardTitle.textContent = pendingCallDisplay ? `${displayedPlayer.name} just acted` : `${activePlayer.name} to act`;
-    elements.next.disabled = Boolean(state.pendingUserDecision);
+    elements.next.disabled = state.pendingUserDecision?.phase === "call";
   }
   elements.previous.disabled = timeline.length <= 1;
 }
@@ -458,6 +461,10 @@ function render() {
 }
 
 elements.next.addEventListener("click", () => {
+  if (state.pendingUserDecision?.phase === "turn" && state.pendingUserDecision.recommendedType !== null) {
+    chooseUserDecision({ kind: "discard", type: state.pendingUserDecision.recommendedType });
+    return;
+  }
   if (state.pendingUserDecision) {
     return;
   }

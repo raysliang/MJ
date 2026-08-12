@@ -598,6 +598,7 @@
       options.push({
         kind: "discard",
         type: typeOf(tile),
+        id: tile.id,
         label: `${tileGlyph(tile)} ${tileName(tile)}`,
         tilesAway: analysis.tilesAway,
         improvementCopies: analysis.improvementCopies
@@ -622,7 +623,9 @@
       turn,
       pendingCall,
       options,
-      discardOptions: bestDiscard?.discardOptions ?? []
+      discardOptions: bestDiscard?.discardOptions ?? [],
+      recommendedType: bestDiscard?.tile ? typeOf(bestDiscard.tile) : null,
+      recommendedId: bestDiscard?.tile?.id ?? null
     };
   }
   function buildUserCallDecision(state2, seatIndex, discardedTile, discardingSeat) {
@@ -1388,7 +1391,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:05 UTC";
+  var BUILD_VERSION = "2026-08-12 05:08 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1549,6 +1552,7 @@
     const displayDrawnTiles = handTiles.filter((tile) => newTileIds.includes(tile.id));
     const discardedTileId = showingPreDiscardHand ? lastAction.discardedTileId : null;
     const discardOptions = showingPreDiscardHand ? lastAction?.discardOptions ?? [] : [];
+    const pendingRecommendationId = state.pendingUserDecision?.phase === "turn" ? state.pendingUserDecision.recommendedId : null;
     const discardOptionByType = new Map(discardOptions.map((option) => [option.type, option]));
     const selectedDiscardType = lastAction?.discardedTile?.type ?? null;
     const equivalentDiscardTypes = new Set((lastAction?.equivalentDiscards ?? []).map((tile) => tile.type));
@@ -1565,7 +1569,7 @@
     compactHandLayout.classList.toggle("has-melds", seat.melds.length > 0);
     document.querySelector("#hand-0").innerHTML = displayHandTiles.map((tile) => tileMarkup(tile, {
       drawn: drawnTileIds.includes(tile.id),
-      discarded: discardedTileId === tile.id,
+      discarded: discardedTileId === tile.id || pendingRecommendationId === tile.id,
       alternative: equivalentDiscardTypes.has(tile.type) && tile.type !== selectedDiscardType,
       decision: discardOptionByType.get(tile.type) ? buildTileDecision(discardOptionByType.get(tile.type), discardOptions, discardedTileId) : null
     })).join("");
@@ -1725,7 +1729,7 @@
       elements.next.disabled = true;
     } else {
       elements.boardTitle.textContent = pendingCallDisplay ? `${displayedPlayer.name} just acted` : `${activePlayer.name} to act`;
-      elements.next.disabled = Boolean(state.pendingUserDecision);
+      elements.next.disabled = state.pendingUserDecision?.phase === "call";
     }
     elements.previous.disabled = timeline.length <= 1;
   }
@@ -1816,6 +1820,10 @@
     renderPublicRiver();
   }
   elements.next.addEventListener("click", () => {
+    if (state.pendingUserDecision?.phase === "turn" && state.pendingUserDecision.recommendedType !== null) {
+      chooseUserDecision({ kind: "discard", type: state.pendingUserDecision.recommendedType });
+      return;
+    }
     if (state.pendingUserDecision) {
       return;
     }

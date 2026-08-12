@@ -631,6 +631,7 @@ function buildUserTurnDecision(state, seatIndex, pendingCall = null, turn = stat
     options.push({
       kind: "discard",
       type: typeOf(tile),
+      id: tile.id,
       label: `${tileGlyph(tile)} ${tileName(tile)}`,
       tilesAway: analysis.tilesAway,
       improvementCopies: analysis.improvementCopies
@@ -655,7 +656,9 @@ function buildUserTurnDecision(state, seatIndex, pendingCall = null, turn = stat
     turn,
     pendingCall,
     options,
-    discardOptions: bestDiscard?.discardOptions ?? []
+    discardOptions: bestDiscard?.discardOptions ?? [],
+    recommendedType: bestDiscard?.tile ? typeOf(bestDiscard.tile) : null,
+    recommendedId: bestDiscard?.tile?.id ?? null
   };
 }
 

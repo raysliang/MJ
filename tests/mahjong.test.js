@@ -71,6 +71,18 @@ test("user-controlled East pauses and applies the selected discard", () => {
   assert.equal(state.lastAction.discardedTile.type, selected.type);
 });
 
+test("user-controlled East exposes the recommended discard for Next", () => {
+  const state = createGame({ seed: 9 });
+  state.userControl = true;
+  nextTurn(state);
+  assert.equal(state.pendingUserDecision.phase, "turn");
+  assert.equal(state.pendingUserDecision.recommendedType !== null, true);
+  const recommended = state.pendingUserDecision.recommendedType;
+  state.userDecisionSelection = { kind: "discard", type: recommended };
+  nextTurn(state);
+  assert.equal(state.lastAction.discardedTile.type, recommended);
+});
+
 test("standard hands with concealed sequences are complete", () => {
   const winning = hand([
     0, 1, 2,
