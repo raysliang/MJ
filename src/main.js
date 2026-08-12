@@ -245,7 +245,6 @@ function renderOpponentSeat(seatIndex) {
   card.classList.toggle("is-winner", winner);
   card.classList.toggle("is-finished", Boolean(state.terminal) && !winner);
   document.querySelector(`#opponent-label-${seatIndex}`).textContent = `${seat.name} [${seat.concealed.length}]:`;
-  document.querySelector(`#opponent-melds-${seatIndex}`).innerHTML = renderMelds(seat);
 }
 
 function analyzedHandForDraws(analysis) {

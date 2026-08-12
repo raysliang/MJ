@@ -87,6 +87,16 @@ button,
   padding: 2.4rem 1.5rem 1.5rem;
 }
 
+.build-footer {
+  margin-top: 1.25rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  text-align: center;
+}
+
 .topbar,
 .turn-controls,
 .status-ribbon,
