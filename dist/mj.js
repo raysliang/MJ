@@ -1383,7 +1383,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:18 UTC";
+  var BUILD_VERSION = "2026-08-12 05:21 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1584,6 +1584,11 @@
     }
     state.userDecisionSelection = choice;
     state = nextTurn(state);
+    let automaticSteps = 0;
+    while (!state.terminal && !state.pendingUserDecision && automaticSteps < 4) {
+      state = nextTurn(state);
+      automaticSteps += 1;
+    }
     timeline.push(structuredClone(state));
     render();
   }

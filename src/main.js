@@ -206,6 +206,11 @@ function chooseUserDecision(choice) {
   }
   state.userDecisionSelection = choice;
   state = nextTurn(state);
+  let automaticSteps = 0;
+  while (!state.terminal && !state.pendingUserDecision && automaticSteps < 4) {
+    state = nextTurn(state);
+    automaticSteps += 1;
+  }
   timeline.push(structuredClone(state));
   render();
 }
