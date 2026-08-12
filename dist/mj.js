@@ -1215,6 +1215,7 @@
     let callInfo = null;
     let equivalentDiscards = [];
     let discardOptions = [];
+    let winningTile = null;
     const pendingCall = pendingUserTurn?.pendingCall ?? state2.pendingCall;
     if (userSelection?.kind === "concealedKong" || userSelection?.kind === "addedKong") {
       drawnTiles = [];
@@ -1250,6 +1251,7 @@
       drawnTiles.push(openingDraw);
     }
     if (state2.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds)) {
+      winningTile = drawnTiles.at(-1) ?? null;
       state2.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by self-draw.` };
       const explanation2 = `${seat.name} completes four melds and a pair with the drawn hand. Self-draw is legal; ordinary discard wins are not used.`;
       state2.lastAction = {
@@ -1260,8 +1262,10 @@
         explanation: explanation2,
         events,
         handBeforeDiscard,
-        drawnTiles,
-        drawnTileIds: drawnTiles.map((tile) => tile.id),
+        drawnTiles: winningTile ? [winningTile] : drawnTiles,
+        drawnTileIds: winningTile ? [winningTile.id] : drawnTiles.map((tile) => tile.id),
+        winningTile,
+        winningTileId: winningTile?.id ?? null,
         discardedTile: null,
         discardedTileId: null,
         equivalentDiscards: [],
@@ -1306,6 +1310,7 @@
           drawnTiles.push(replacement);
           events.push(`${seat.name} draws replacement ${tileGlyph(replacement)}.`);
           if (isWinningHand(seat.concealed, seat.melds)) {
+            winningTile = replacement;
             state2.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by drawing the replacement tile after an added kong.` };
           }
         }
@@ -1320,6 +1325,7 @@
         drawnTiles.push(replacement);
         events.push(`${seat.name} draws replacement ${tileGlyph(replacement)}.`);
         if (isWinningHand(seat.concealed, seat.melds)) {
+          winningTile = replacement;
           state2.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by drawing the replacement tile after a concealed kong.` };
         }
       }
@@ -1328,6 +1334,10 @@
       state2.turn = turnNumber;
       state2.pendingUserDecision = buildUserTurnDecision(state2, seatIndex, pendingCall, turnNumber, drawnTiles);
       return state2;
+    }
+    if (state2.terminal?.type === "selfDraw") {
+      actionKind = "selfDraw";
+      handBeforeDiscard = sortTiles(seat.concealed);
     }
     if (!state2.terminal) {
       handBeforeDiscard = sortTiles(seat.concealed);
@@ -1382,6 +1392,8 @@
       handBeforeDiscard,
       drawnTiles: [...pendingCall?.drawnTiles ?? [], ...drawnTiles],
       drawnTileIds: [...pendingCall?.drawnTileIds ?? [], ...drawnTiles.map((tile) => tile.id)],
+      winningTile,
+      winningTileId: winningTile?.id ?? null,
       discardedTile,
       discardedTileId: discardedTile?.id ?? null,
       equivalentDiscards,
@@ -1394,7 +1406,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 05:38 UTC";
+  var BUILD_VERSION = "2026-08-12 05:43 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
@@ -1546,7 +1558,7 @@
     const next = !state.terminal && Boolean(lastAction) && state.activeSeat === 0 && !active;
     const showingPreDiscardHand = lastAction?.seatIndex === 0 && Array.isArray(lastAction.handBeforeDiscard);
     const handTiles = showingPreDiscardHand ? lastAction.handBeforeDiscard : seat.concealed;
-    const drawnTileIds = showingPreDiscardHand ? lastAction.drawnTileIds ?? [] : [];
+    const drawnTileIds = showingPreDiscardHand ? lastAction.kind === "selfDraw" && lastAction.winningTileId !== void 0 ? [lastAction.winningTileId] : lastAction.drawnTileIds ?? [] : [];
     const openingAction = lastAction?.seatIndex === 0 && lastAction.turn === 1 && !lastAction.drawnTiles?.length;
     const openingTile = handTiles.length === 14 && (!lastAction && state.turn === 0 || openingAction) ? handTiles[handTiles.length - 1] : null;
     const pendingDrawnTileIds = state.pendingUserDecision?.phase === "turn" ? state.pendingUserDecision.drawnTileIds ?? [] : [];

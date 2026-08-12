@@ -370,6 +370,8 @@ test("a complete starting hand ends as a self-draw win", () => {
   nextTurn(state);
   assert.equal(state.terminal.type, "selfDraw");
   assert.equal(state.terminal.winner, 0);
+  assert.equal(state.lastAction.winningTile.type, 31);
+  assert.equal(state.lastAction.winningTileId, state.lastAction.winningTile.id);
 });
 
 test("a pong caller must discard even when its effective hand is complete", () => {

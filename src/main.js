@@ -144,7 +144,11 @@ function renderEastSeat() {
   const next = !state.terminal && Boolean(lastAction) && state.activeSeat === 0 && !active;
   const showingPreDiscardHand = lastAction?.seatIndex === 0 && Array.isArray(lastAction.handBeforeDiscard);
   const handTiles = showingPreDiscardHand ? lastAction.handBeforeDiscard : seat.concealed;
-  const drawnTileIds = showingPreDiscardHand ? lastAction.drawnTileIds ?? [] : [];
+  const drawnTileIds = showingPreDiscardHand
+    ? lastAction.kind === "selfDraw" && lastAction.winningTileId !== undefined
+      ? [lastAction.winningTileId]
+      : lastAction.drawnTileIds ?? []
+    : [];
   const openingAction = lastAction?.seatIndex === 0
     && lastAction.turn === 1
     && !(lastAction.drawnTiles?.length);

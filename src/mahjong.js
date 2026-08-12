@@ -1325,6 +1325,7 @@ export function nextTurn(state) {
   let callInfo = null;
   let equivalentDiscards = [];
   let discardOptions = [];
+  let winningTile = null;
   const pendingCall = pendingUserTurn?.pendingCall ?? state.pendingCall;
   if (userSelection?.kind === "concealedKong" || userSelection?.kind === "addedKong") {
     drawnTiles = [];
@@ -1368,6 +1369,7 @@ export function nextTurn(state) {
   }
 
   if (state.canDeclareSelfDraw !== false && isWinningHand(seat.concealed, seat.melds)) {
+    winningTile = drawnTiles.at(-1) ?? null;
     state.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by self-draw.` };
     const explanation = `${seat.name} completes four melds and a pair with the drawn hand. Self-draw is legal; ordinary discard wins are not used.`;
     state.lastAction = {
@@ -1378,8 +1380,10 @@ export function nextTurn(state) {
       explanation,
       events,
       handBeforeDiscard,
-      drawnTiles,
-      drawnTileIds: drawnTiles.map(tile => tile.id),
+      drawnTiles: winningTile ? [winningTile] : drawnTiles,
+      drawnTileIds: winningTile ? [winningTile.id] : drawnTiles.map(tile => tile.id),
+      winningTile,
+      winningTileId: winningTile?.id ?? null,
       discardedTile: null,
       discardedTileId: null,
       equivalentDiscards: [],
@@ -1430,6 +1434,7 @@ export function nextTurn(state) {
         drawnTiles.push(replacement);
         events.push(`${seat.name} draws replacement ${tileGlyph(replacement)}.`);
         if (isWinningHand(seat.concealed, seat.melds)) {
+          winningTile = replacement;
           state.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by drawing the replacement tile after an added kong.` };
         }
       }
@@ -1444,6 +1449,7 @@ export function nextTurn(state) {
       drawnTiles.push(replacement);
       events.push(`${seat.name} draws replacement ${tileGlyph(replacement)}.`);
       if (isWinningHand(seat.concealed, seat.melds)) {
+        winningTile = replacement;
         state.terminal = { type: "selfDraw", winner: seatIndex, message: `${seat.name} wins by drawing the replacement tile after a concealed kong.` };
       }
     }
@@ -1454,6 +1460,11 @@ export function nextTurn(state) {
     state.turn = turnNumber;
     state.pendingUserDecision = buildUserTurnDecision(state, seatIndex, pendingCall, turnNumber, drawnTiles);
     return state;
+  }
+
+  if (state.terminal?.type === "selfDraw") {
+    actionKind = "selfDraw";
+    handBeforeDiscard = sortTiles(seat.concealed);
   }
 
   if (!state.terminal) {
@@ -1513,6 +1524,8 @@ export function nextTurn(state) {
     handBeforeDiscard,
     drawnTiles: [...(pendingCall?.drawnTiles ?? []), ...drawnTiles],
     drawnTileIds: [...(pendingCall?.drawnTileIds ?? []), ...drawnTiles.map(tile => tile.id)],
+    winningTile,
+    winningTileId: winningTile?.id ?? null,
     discardedTile,
     discardedTileId: discardedTile?.id ?? null,
     equivalentDiscards,
