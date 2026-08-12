@@ -12,7 +12,7 @@ import {
 } from "./mahjong.js";
 
 const BUILD_VERSION = __BUILD_VERSION__;
-let decisionStrategy = "original";
+const decisionStrategy = "efficiency";
 
 function createInitialState(seed) {
   const initialState = createGame(seed === undefined ? {} : { seed });
@@ -42,34 +42,10 @@ const elements = {
   sequenceTiles: document.querySelector("#sequence-tiles"),
   otherTiles: document.querySelector("#other-tiles"),
   copyPosition: document.querySelector("#copy-position"),
-  copyPositionLabel: document.querySelector("#copy-position-label"),
-  strategySelect: document.querySelector("#strategy-select")
+  copyPositionLabel: document.querySelector("#copy-position-label")
 };
 
 document.querySelector("#build-version").textContent = `Build ${BUILD_VERSION}`;
-
-const DOT_POSITIONS = {
-  1: [5],
-  2: [2, 8],
-  3: [1, 5, 9],
-  4: [1, 3, 7, 9],
-  5: [1, 3, 5, 7, 9],
-  6: [1, 3, 4, 6, 7, 9],
-  7: [1, 3, 4, 5, 6, 7, 9],
-  8: [1, 2, 3, 4, 6, 7, 8, 9],
-  9: [1, 2, 3, 4, 5, 6, 7, 8, 9]
-};
-
-const BAMBOO_POSITIONS = {
-  2: [2, 8],
-  3: [1, 5, 9],
-  4: [1, 3, 7, 9],
-  5: [1, 3, 5, 7, 9],
-  6: [1, 3, 4, 6, 7, 9],
-  7: [1, 3, 4, 5, 6, 7, 9],
-  8: [1, 2, 3, 4, 6, 7, 8, 9],
-  9: [1, 2, 3, 4, 5, 6, 7, 8, 9]
-};
 
 const TILE_ART_URLS = {
   0: "https://commons.wikimedia.org/wiki/Special:FilePath/0101%E4%B8%80%E8%90%AC.svg",
@@ -90,6 +66,15 @@ const TILE_ART_URLS = {
   15: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/0307%E4%B8%83%E6%A2%9D.svg/120px-0307%E4%B8%83%E6%A2%9D.svg.png",
   16: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/0308%E5%85%AB%E6%A2%9D.svg/120px-0308%E5%85%AB%E6%A2%9D.svg.png",
   17: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/0309%E4%B9%9D%E6%A2%9D.svg/120px-0309%E4%B9%9D%E6%A2%9D.svg.png",
+  18: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/0201%E4%B8%80%E9%A4%85.svg/120px-0201%E4%B8%80%E9%A4%85.svg.png",
+  19: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/0202%E4%BA%8C%E9%A4%85.svg/120px-0202%E4%BA%8C%E9%A4%85.svg.png",
+  20: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/0203%E4%B8%89%E9%A4%85.svg/120px-0203%E4%B8%89%E9%A4%85.svg.png",
+  21: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/0204%E5%9B%9B%E9%A4%85.svg/120px-0204%E5%9B%9B%E9%A4%85.svg.png",
+  22: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/0205%E4%BA%94%E9%A4%85.svg/120px-0205%E4%BA%94%E9%A4%85.svg.png",
+  23: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/0206%E5%85%AD%E9%A4%85.svg/120px-0206%E5%85%AD%E9%A4%85.svg.png",
+  24: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/0207%E4%B8%83%E9%A4%85.svg/120px-0207%E4%B8%83%E9%A4%85.svg.png",
+  25: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/0208%E5%85%AB%E9%A4%85.svg/120px-0208%E5%85%AB%E9%A4%85.svg.png",
+  26: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/0209%E4%B9%9D%E9%A4%85.svg/120px-0209%E4%B9%9D%E9%A4%85.svg.png",
   27: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/0401%E6%9D%B1%E9%A2%A8.svg/120px-0401%E6%9D%B1%E9%A2%A8.svg.png",
   28: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/0403%E5%8D%97%E9%A2%A8.svg/120px-0403%E5%8D%97%E9%A2%A8.svg.png",
   29: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/0402%E8%A5%BF%E9%A2%A8.svg/120px-0402%E8%A5%BF%E9%A2%A8.svg.png",
@@ -116,23 +101,7 @@ function tileFaceMarkup(type, glyph, hidden) {
   if (TILE_ART_URLS[type]) {
     return `<img class="tile-art" src="${localTileArtPath(type)}" data-fallback="${TILE_ART_URLS[type]}" alt="" draggable="false" onerror="if(this.src.endsWith('/missing.webp')){this.onerror=null;this.src=this.dataset.fallback}else{this.onerror=null;this.src=this.dataset.fallback}">`;
   }
-  if (type >= 18 && type < 27) {
-    const rank = type - 17;
-    const pips = DOT_POSITIONS[rank].map(position => {
-      const row = Math.floor((position - 1) / 3);
-      return `<span class="dot-pip dot-position-${position} dot-row-${row}"></span>`;
-    }).join("");
-    return `<span class="tile-face tile-dots-face tile-dots-rank-${rank}" aria-hidden="true">${pips}</span>`;
-  }
-  if (type >= 9 && type < 18) {
-    const rank = type - 8;
-    if (rank === 1) {
-      return `<span class="tile-face tile-bamboo-one">${glyph}</span>`;
-    }
-    const sticks = BAMBOO_POSITIONS[rank].map(position => `<span class="bamboo-stick bamboo-position-${position}"></span>`).join("");
-    return `<span class="tile-face tile-bamboo-face tile-bamboo-rank-${rank}" aria-hidden="true">${sticks}</span>`;
-  }
-  return `<span class="tile-face">${glyph}</span>`;
+  return `<span class="tile-face tile-art-missing" aria-hidden="true"></span>`;
 }
 
 function tileMarkup(tile, { compact = false, claimed = false, drawn = false, discarded = false, taken = false, alternative = false, decision = null, inline = false, hidden = false } = {}) {
@@ -366,15 +335,6 @@ function formatMelds(melds) {
   return melds.map(meld => `${meld.kind} [${formatTileCodes(meld.tiles)}]`).join("; ");
 }
 
-function strategyLabel(strategy) {
-  return {
-    original: "Balanced",
-    efficiency: "Immediate efficiency",
-    future: "Future rollout",
-    structure: "Structure first"
-  }[strategy] ?? "Balanced";
-}
-
 function describeTile(tile) {
   return `${tileCode(tile)} (${tileEnglishName(tile)})`;
 }
@@ -415,8 +375,7 @@ function buildPositionPrompt() {
         `  Description: ${action.discardedTile ? `${reviewSeat.name} throws ${describeTile(action.discardedTile)}.` : `${reviewSeat.name} makes a ${action.kind} action.`}`,
         ...(action.call ? [`  Response: ${state.players[action.call.seatIndex].name} calls ${action.call.kind} on ${describeTile(action.call.takenTile)}.`] : []),
         ...(action.callFromPrevious ? [`  Prior call: ${state.players[action.callFromPrevious.seatIndex].name} called ${action.callFromPrevious.kind} on ${describeTile(action.callFromPrevious.takenTile)}.`] : []),
-        `  Simulation note: ${action.explanation}`,
-        `  Decision profile: ${strategyLabel(state.decisionStrategy)}`
+        `  Simulation note: ${action.explanation}`
       ]
     : [
         "Move under review:",
@@ -473,13 +432,6 @@ elements.previous.addEventListener("click", () => {
 });
 
 elements.newDeal.addEventListener("click", () => {
-  state = createInitialState(Date.now());
-  timeline = [structuredClone(state)];
-  render();
-});
-
-elements.strategySelect.addEventListener("change", event => {
-  decisionStrategy = event.target.value;
   state = createInitialState(Date.now());
   timeline = [structuredClone(state)];
   render();

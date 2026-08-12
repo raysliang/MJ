@@ -12,6 +12,7 @@ const HONOR_CODES = ["east", "south", "west", "north", "red", "green", "white"];
 const SEAT_NAMES = ["East", "South", "West", "North"];
 const TILE_COUNT = 34;
 const COPIES_PER_TILE = 4;
+const MAX_SHANTEN_CACHE_ENTRIES = 100000;
 const shantenCache = new Map();
 
 export const TILE_TYPES = Object.freeze([
@@ -191,6 +192,9 @@ function calculateShantenFromCounts(counts, openMeldCount = 0) {
   }
 
   search(0, 0, 0, 0);
+  if (shantenCache.size >= MAX_SHANTEN_CACHE_ENTRIES) {
+    shantenCache.clear();
+  }
   shantenCache.set(cacheKey, best);
   return best;
 }
@@ -681,6 +685,31 @@ export function chooseTurnAction(state, seatIndex = state.activeSeat) {
     };
   }
 
+  const overrideType = state.discardOverrides?.[seatIndex];
+  if (overrideType !== undefined && bestDiscard) {
+    delete state.discardOverrides[seatIndex];
+    const overrideTile = seat.concealed.find(tile => typeOf(tile) === overrideType);
+    if (overrideTile) {
+      const remaining = seat.concealed.filter(tile => tile.id !== overrideTile.id);
+      const analysis = analyzeHand(remaining, seat.melds, visibleCounts);
+      return {
+        kind: "discard",
+        type: overrideType,
+        tile: overrideTile,
+        candidate: {
+          ...bestDiscard,
+          tile: overrideTile,
+          remaining,
+          analysis
+        },
+        discardOptions: bestDiscard.discardOptions,
+        explanation: `${seat.name} follows the external model discard recommendation for this benchmark position.`,
+        beforeAnalysis,
+        visibleCounts
+      };
+    }
+  }
+
   if (!bestDiscard) {
     return {
       kind: "pass",
@@ -1075,6 +1104,7 @@ export function createGame({ seed = Date.now() } = {}) {
     pendingCall: null,
     lastAction: null,
     claimedDiscardIds: [],
+    discardOverrides: {},
     history: []
   };
 }

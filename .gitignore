@@ -5,7 +5,9 @@ node_modules/
 .env.*
 !.env.example
 .cache/
+.tools/
 coverage/
+benchmark-results*.csv
 *.tmp
 *.temp
 *.bak
