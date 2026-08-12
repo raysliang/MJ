@@ -1191,7 +1191,7 @@
   }
 
   // src/main.js
-  var BUILD_VERSION = "2026-08-12 04:27 UTC";
+  var BUILD_VERSION = "2026-08-12 04:28 UTC";
   var decisionStrategy = "efficiency";
   function createInitialState(seed) {
     const initialState = createGame(seed === void 0 ? {} : { seed });
