@@ -228,10 +228,6 @@ function renderUserDecision() {
   const pending = state.pendingUserDecision;
   const actionOptions = pending?.options.filter(option => option.kind !== "discard") ?? [];
   elements.userDecisionPanel.hidden = actionOptions.length === 0;
-  if (actionOptions.length === 0) {
-    elements.userDecisionActions.innerHTML = "";
-    return;
-  }
   elements.userDecisionActions.innerHTML = actionOptions
     .map(option => `<button class="button button-secondary user-decision-button" type="button" data-user-kind="${option.kind}" data-user-type="${option.type ?? ""}">${option.label}</button>`)
     .join("");
